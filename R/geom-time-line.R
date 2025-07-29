@@ -34,46 +34,13 @@ GeomTimeLine <- ggproto(
     # Otherwise, there is a gap and there is no dashed timezone line
 
 
-    # Check if time scale is civil not absolute
-    # if(inherits(x_time, c("POSIXct","POSIXlt")))
+    tz_jumps <- c(FALSE, data$xoffset[-1] != data$xoffset[-nrow(data)])
+    tz_jumps_i <- which(tz_jumps)
 
-    # tx <- panel_params$x$get_transformation()
-    # x_time <- tx$inverse(data$x)
-    #
-    # # Find timezone boundaries for time range plotted
-    # time_lim <- clock::as_zoned_time(range(x_time))
-    # tz_shifts <- list()
-    # tz_time <- time_lim[1]
-    # while((tz_info <- clock::zoned_time_info(tz_time))$end < time_lim[2]) {
-    #   tz_shifts[[length(tz_shifts) + 1L]] <- tz_info
-    #   tz_time <- tz_info$end
-    # }
-    # tz_shifts <- dplyr::bind_rows(tz_shifts, tz_info)
-    #
-    # # Create civil time data
-    #
-    # # needs refactoring for efficiency
-    # match_before <- function(x, table) {
-    #   vapply(x, function(.) which(.<=table)[1], integer(1L))
-    # }
-    # tz_i <- match_before(data$x, unclass(as.POSIXct(tz_shifts$end)))
-    #
-    # # match_between <- function(x, left, right) {
-    # #   lapply(x, function(.) which(.>=left & .<=right))
-    # # }
-    # # match_between(data$x, as.POSIXct(tz_shifts$begin), as.POSIXct(tz_shifts$end))
-    #
-    #
-    # # is tz boundary
-    # tz_boundaries <- match(clock::as_zoned_time(x_time), tz_shifts$begin)
-    # tz_boundaries_i <- which(!is.na(tz_boundaries))
-    #
-    # # augment data with tz lines
-    # # if (any(!is.na(tz_boundaries)))
-    # data <- data[rep(seq_len(nrow(data)), 1L + !is.na(tz_boundaries)),]
-    # tz_jump_dest <- seq_along(tz_boundaries_i) + tz_boundaries_i
-    # data$x[tz_jump_dest] <- data$x[tz_jump_dest] - diff(as.integer(tz_shifts$offset[tz_boundaries[tz_boundaries_i] - 0:1]))
-    # data$linetype[tz_jump_dest-1] <- 2L
+    data <- data[rep(seq_len(nrow(data)), 1L + tz_jumps),]
+    tz_jump_dest <- seq_along(tz_jumps_i) + tz_jumps_i - 1
+    data$x[tz_jump_dest] <- data$x[tz_jump_dest] + diff(data$xoffset[tz_jump_dest - (0:1)])
+    data$linetype[tz_jump_dest] <- 2L
 
 
     if (!anyDuplicated(data$group)) {
