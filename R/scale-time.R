@@ -307,7 +307,7 @@ clock_offset <- function(x) {
     clock::zoned_time_info(
       clock::as_zoned_time(x)
     )$offset,
-    error = function(e) 0
+    error = function(e) rep(0, length(x))
   )
 }
 tz_offset <- function(x) {
