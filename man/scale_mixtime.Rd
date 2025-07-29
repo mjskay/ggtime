@@ -12,9 +12,7 @@ scale_x_mixtime(
   time_labels = waiver(),
   minor_breaks = waiver(),
   time_minor_breaks = waiver(),
-  time_type = c("civil", "absolute"),
-  wraps = waiver(),
-  time_wraps = waiver(),
+  civil_time = TRUE,
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -26,28 +24,51 @@ scale_x_mixtime(
 )
 }
 \arguments{
+\item{name}{The name of the scale. Used as the axis or legend title. If
+\code{waiver()}, the default, the name of the scale is taken from the first
+mapping used for that aesthetic. If \code{NULL}, the legend title will be
+omitted.}
+
+\item{breaks}{One of:
+\itemize{
+\item \code{NULL} for no breaks
+\item \code{waiver()} for the breaks specified by \code{date_breaks}
+\item A \code{Date}/\code{POSIXct} vector giving positions of breaks
+\item A function that takes the limits as input and returns breaks as output
+}}
+
 \item{time_breaks}{A \if{html}{\out{<duration>}} giving the distance between breaks like
 "2 weeks", or "10 years". If both \code{breaks} and \code{time_breaks} are specified,
 \code{time_breaks} wins.}
+
+\item{labels}{One of:
+\itemize{
+\item \code{NULL} for no labels
+\item \code{waiver()} for the default labels computed by the
+transformation object
+\item A character vector giving labels (must be same length as \code{breaks})
+\item An expression vector (must be the same length as breaks). See ?plotmath for details.
+\item A function that takes the breaks as input and returns labels
+as output. Also accepts rlang \link[rlang:as_function]{lambda} function
+notation.
+}}
+
+\item{minor_breaks}{One of:
+\itemize{
+\item \code{NULL} for no breaks
+\item \code{waiver()} for the breaks specified by \code{date_minor_breaks}
+\item A \code{Date}/\code{POSIXct} vector giving positions of minor breaks
+\item A function that takes the limits as input and returns minor breaks as
+output
+}}
 
 \item{time_minor_breaks}{A \if{html}{\out{<duration>}} giving the distance between minor breaks like
 "2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
 specified, \code{time_minor_breaks} wins.}
 
-\item{time_type}{The positioning of zoned time, "civil" uses the local/wall
-time (the default) and "absolute" uses the continuous UTC time.}
-
-\item{wraps}{Wrap the time scale around a calendrical granularity, one of:
-\itemize{
-\item \code{NULL} or \code{waiver()} for no wrapping (the default)
-\item A \code{mixtime} vector giving positions of wrapping points
-\item A function that takes the limits as input and returns wrapping points as
-output
-}}
-
-\item{time_wraps}{A \if{html}{\out{<duration>}} giving the distance between temporal wrapping
-like "2 weeks", or "10 years". If both \code{wraps} and \code{time_wraps} are
-specified, \code{time_wraps} wins.}
+\item{civil_time}{The positioning of zoned time. If TRUE time is positioned
+uses the local/wall time (the default), otherwise time will be shown in with
+absolute/continuous UTC time.}
 
 \item{warps}{Warp the time scale to have a consistent length, one of:
 \itemize{
@@ -60,6 +81,57 @@ output
 \item{time_warps}{A \if{html}{\out{<duration>}} giving the distance between temporal warping
 like "2 weeks", or "10 years". If both \code{warps} and \code{time_warps} are
 specified, \code{time_warps} wins.}
+
+\item{limits}{One of:
+\itemize{
+\item \code{NULL} to use the default scale range
+\item A numeric vector of length two providing limits of the scale.
+Use \code{NA} to refer to the existing minimum or maximum
+\item A function that accepts the existing (automatic) limits and returns
+new limits. Also accepts rlang \link[rlang:as_function]{lambda} function
+notation.
+Note that setting limits on positional scales will \strong{remove} data outside of the limits.
+If the purpose is to zoom, use the limit argument in the coordinate system
+(see \code{\link[ggplot2:coord_cartesian]{coord_cartesian()}}).
+}}
+
+\item{expand}{For position scales, a vector of range expansion constants used to add some
+padding around the data to ensure that they are placed some distance
+away from the axes. Use the convenience function \code{\link[ggplot2:expansion]{expansion()}}
+to generate the values for the \code{expand} argument. The defaults are to
+expand the scale by 5\% on each side for continuous variables, and by
+0.6 units on each side for discrete variables.}
+
+\item{oob}{One of:
+\itemize{
+\item Function that handles limits outside of the scale limits
+(out of bounds). Also accepts rlang \link[rlang:as_function]{lambda}
+function notation.
+\item The default (\code{\link[scales:oob]{scales::censor()}}) replaces out of
+bounds values with \code{NA}.
+\item \code{\link[scales:oob]{scales::squish()}} for squishing out of bounds values into range.
+\item \code{\link[scales:oob]{scales::squish_infinite()}} for squishing infinite values into range.
+}}
+
+\item{guide}{A function used to create a guide or its name. See
+\code{\link[ggplot2:guides]{guides()}} for more information.}
+
+\item{position}{For position scales, The position of the axis.
+\code{left} or \code{right} for y axes, \code{top} or \code{bottom} for x axes.}
+
+\item{sec.axis}{\code{\link[ggplot2:sec_axis]{sec_axis()}} is used to specify a secondary axis.}
+
+\item{loops}{Loop the time scale around a calendrical granularity, one of:
+\itemize{
+\item \code{NULL} or \code{waiver()} for no wrapping (the default)
+\item A \code{mixtime} vector giving positions of wrapping points
+\item A function that takes the limits as input and returns wrapping points as
+output
+}}
+
+\item{time_loops}{A \url{mixtime::duration} giving the distance between temporal
+loops like "2 weeks", or "10 years". If both \code{loops} and \code{time_loops} are
+specified, \code{time_loops} wins.}
 }
 \description{
 These are the default scales for mixtime vectors, which are usually used for

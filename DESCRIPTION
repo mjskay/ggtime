@@ -62,9 +62,10 @@ Imports:
     tsibble,
     fabletools,
     dplyr,
+    lubridate (>= 1.7.1),
     tidyr,
     ggplot2,
-    lubridate,
     gtable,
     scales,
-    vctrs
+    vctrs,
+    R6

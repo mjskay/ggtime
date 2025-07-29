@@ -70,19 +70,15 @@ to the top row of the block.
 }
 \examples{
 \donttest{
-fs <- hourly_peds \%>\%
-  dplyr::filter(Date < as.Date("2016-05-01"))
+fs <- tsibble::pedestrian \%>\%
+  dplyr::filter(Date < as.Date("2015-05-01"))
 
-fs \%>\%
-  ggplot(aes(x = Time, y = Hourly_Counts)) +
-  geom_line(aes(colour = Sensor_Name)) +
-  facet_calendar(~ Date, nrow = 2) + # or ~ as.Date(Date_Time)
+fs |>
+  ggplot(aes(x = Time, y = Count)) +
+  geom_line(aes(colour = Sensor)) +
+  facet_calendar(vars(Date), nrow = 2) +
   theme(legend.position = "bottom")
 }
-}
-\seealso{
-\link{frame_calendar} for a compact calendar display, by quickly transforming
-the data.
 }
 \author{
 Earo Wang
