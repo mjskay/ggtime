@@ -4,21 +4,21 @@
 #' a plot automatically. To override the scales behaviour manually, use
 #' `scale_*_mixtime`.
 #'
-#' @inheritParams ggplot2::scale_date
+#' @inheritParams ggplot2::scale_x_date
 #' @param time_breaks A <duration> giving the distance between breaks like
 #' "2 weeks", or "10 years". If both `breaks` and `time_breaks` are specified,
 #' `time_breaks` wins.
 #' @param time_minor_breaks A <duration> giving the distance between minor breaks like
 #' "2 weeks", or "10 years". If both `minor_breaks` and `time_minor_breaks` are
 #' specified, `time_minor_breaks` wins.
-#' @param wraps Wrap the time scale around a calendrical granularity, one of:
+#' @param loops Loop the time scale around a calendrical granularity, one of:
 #'   - `NULL` or `waiver()` for no wrapping (the default)
 #'   - A `mixtime` vector giving positions of wrapping points
 #'   - A function that takes the limits as input and returns wrapping points as
 #'     output
-#' @param time_wraps A <mixtime::duration> giving the distance between temporal wrapping
-#' like "2 weeks", or "10 years". If both `wraps` and `time_wraps` are
-#' specified, `time_wraps` wins.
+#' @param time_loops A <mixtime::duration> giving the distance between temporal
+#' loops like "2 weeks", or "10 years". If both `loops` and `time_loops` are
+#' specified, `time_loops` wins.
 #' @param warps Warp the time scale to have a consistent length, one of:
 #'   - `NULL` or `waiver()` for no warping (the default)
 #'   - A `mixtime` vector giving positions of warping points
@@ -40,11 +40,11 @@ scale_x_mixtime <- function(name = waiver(),
                          time_labels = waiver(),
                          minor_breaks = waiver(),
                          time_minor_breaks = waiver(),
-                         time_type = c("civil", "absolute"),
-                         wraps = waiver(),
-                         time_wraps = waiver(),
-                         # warps = waiver(),
-                         # time_warps = waiver(),
+                         civil_time = TRUE,
+                         # loops = waiver(),
+                         # time_loops = waiver(),
+                         warps = waiver(),
+                         time_warps = waiver(),
                          limits = NULL,
                          expand = waiver(),
                          oob = scales::censor,
@@ -58,18 +58,19 @@ scale_x_mixtime <- function(name = waiver(),
     name = name,
     palette = identity,
     breaks = breaks,
-    cal_breaks = cal_breaks,
+    time_breaks = time_breaks,
     labels = labels,
-    cal_labels = cal_labels,
+    time_labels = time_labels,
     minor_breaks = minor_breaks,
-    cal_minor_breaks = cal_minor_breaks,
-    timezone = timezone,
+    time_minor_breaks = time_minor_breaks,
+    timezone = NULL,
     guide = guide,
     limits = limits,
     expand = expand,
     oob = oob,
     position = position
   )
+  debug(sc$get_labels)
 
   set_sec_axis(sec.axis, sc)
 }
@@ -127,15 +128,15 @@ mixtime_scale <- function(aesthetics, transform, trans = deprecated(),
   if (is.character(breaks)) breaks <- breaks_width(breaks)
   if (is.character(minor_breaks)) minor_breaks <- breaks_width(minor_breaks)
 
-  if (!is.waiver(time_breaks)) {
+  if (!is_waiver(time_breaks)) {
     # check_string(cal_breaks)
     breaks <- breaks_width(time_breaks)
   }
-  if (!is.waiver(time_minor_breaks)) {
+  if (!is_waiver(time_minor_breaks)) {
     # check_string(cal_minor_breaks)
-    minor_breaks <- breaks_width(time_minor_breaks)
+    minor_breaks <- breaks_width(time_minor_breaks/zip)
   }
-  if (!is.waiver(time_labels)) {
+  if (!is_waiver(time_labels)) {
     check_string(time_labels)
     labels <- function(self, x) {
       tz <- self$timezone %||% "UTC"
@@ -143,22 +144,12 @@ mixtime_scale <- function(aesthetics, transform, trans = deprecated(),
     }
   }
 
-  # x/y position aesthetics should use ScaleContinuousDate or
-  # ScaleContinuousDatetime; others use ScaleContinuous
-  if (all(aesthetics %in% c(ggplot2:::ggplot_global$x_aes, ggplot2:::ggplot_global$y_aes))) {
-    scale_class <- switch(
-      transform,
-      date = ggplot2::ScaleContinuousDate,
-      time = ScaleContinuousDatetime
-    )
+  # x/y position aesthetics should use ScaleContinuousMixtime; others use ScaleContinuous
+  if (all(aesthetics %in% c(ggplot_global$x_aes, ggplot_global$y_aes))) {
+    scale_class <- ScaleContinuousMixtime
   } else {
     scale_class <- ScaleContinuous
   }
-
-  transform <- switch(transform,
-                      date = scales::transform_date(),
-                      time = scales::transform_time(timezone)
-  )
 
   sc <- ggplot2::continuous_scale(
     aesthetics,
@@ -167,63 +158,162 @@ mixtime_scale <- function(aesthetics, transform, trans = deprecated(),
     minor_breaks = minor_breaks,
     labels = labels,
     guide = guide,
-    transform = transform,
+    transform = transform_mixtime(timezone),
     trans = trans,
     call = call,
     ...,
     super = scale_class
   )
-  sc$timezone <- timezone
+
+  # Range is hard-coded and not inherited by `super` in
+  # `ggplot2::continuous_scale`, replace it.
+  sc$range <- MixtimeRange$new()
   sc
 }
+
+#' @export
+scale_type.mixtime <- function(x) c("mixtime", "continuous")
 
 #' @format NULL
 #' @usage NULL
 #' @export
-ScaleContinuousDatetime <- ggproto(
-  "ScaleContinuousDatetime", ScaleContinuous,
+ScaleContinuousMixtime <- ggproto(
+  "ScaleContinuousMixtime", ScaleContinuous,
   secondary.axis = waiver(),
   timezone = NULL,
-  transform = function(self, x) {
-    tz <- attr(x, "tzone")
-    if (is.null(self$timezone) && !is.null(tz)) {
-      self$timezone <- tz
-      self$trans <- scales::transform_time(self$timezone)
+  range = MixtimeRange$new(),
+  clone = function(self) {
+    new <- ggproto(NULL, self)
+    new$range <- MixtimeRange$new()
+    new
+  },
+  # Redefine ScaleContinuous$train for (possible) self$range scoping issue
+  train = function(self, x) {
+    if (length(x) == 0) {
+      return()
     }
+    self$range$train(x, call = self$call)
+  },
+  transform_df = function(self, df) {
+    # HACK
+    # Add offsets for PositionTime[Civil/Absolute] here as "after_stat" since
+    # Position$default_aes = aes(xoffset = stage(after_stat = f(x))) isn't
+    # currently working in ggplot2
+    missing_aes <- setdiff(names(PositionTimeCivil$default_aes), names(df))
+
+    df <- ggproto_parent(ScaleContinuous, self)$transform_df(df)
+
+    # Match missing_aes offset positions to transformed scales
+    missing_aes_i <- match(missing_aes, paste0(names(df), "offset"))
+    missing_aes_i <- missing_aes_i[!is.na(missing_aes_i)]
+
+    df[missing_aes[missing_aes_i]] <- lapply(df[missing_aes_i], tz_offset)
+
+    df
+  },
+  transform = function(self, x) {
+    # Possibly redefine self$trans with new info from `x`
+
+    print("ScaleMixtime$transform")
     if (is_bare_numeric(x)) {
-      x <- self$trans$inverse(x)
-      cli::cli_warn(c(
-        "A {.cls numeric} value was passed to a {.field Datetime} scale.",
-        i = "The value was converted to {obj_type_friendly(x)}."
+      cli::cli_abort(c(
+        "A {.cls numeric} value was passed to a {.field mixtime} scale.",
+        i = "Please use the mixtime package to create time values."
       ), call = self$call)
     }
-    ggtime:::calendar_wrap(x)
-    # ggproto_parent(ScaleContinuous, self)$transform(x)
+    # ggtime:::calendar_wrap(x)
+    ggproto_parent(ScaleContinuous, self)$transform(x)
   },
   map = function(self, x, limits = self$get_limits()) {
-    self$oob(x, limits)
+    print("ScaleMixtime$map")
+    # self$oob(x, limits)
+
+    if (mixtime::is_mixtime(x)) x <- as.numeric(vecvec::unvecvec(x))
+    x
   },
   break_info = function(self, range = NULL) {
     breaks <- ggproto_parent(ScaleContinuous, self)$break_info(range)
-    if (!(is.waiver(self$secondary.axis) || self$secondary.axis$empty())) {
+    if (!(is_waiver(self$secondary.axis) || self$secondary.axis$empty())) {
       self$secondary.axis$init(self)
       breaks <- c(breaks, self$secondary.axis$break_info(breaks$range, self))
     }
     breaks
   },
   sec_name = function(self) {
-    if (is.waiver(self$secondary.axis)) {
+    if (is_waiver(self$secondary.axis)) {
       waiver()
     } else {
       self$secondary.axis$name
     }
   },
-  make_sec_title = function(self, title) {
-    if (!is.waiver(self$secondary.axis)) {
-      self$secondary.axis$make_title(title)
-    } else {
-      ggproto_parent(ScaleContinuous, self)$make_sec_title(title)
-    }
-  }
+  # make_sec_title = function(self, title) {
+  #   browser()
+  #   if (!is_waiver(self$secondary.axis)) {
+  #     self$secondary.axis$make_title(title)
+  #   } else {
+  #     ggproto_parent(ScaleContinuous, self)$make_sec_title(title)
+  #   }
+  # }
 
 )
+
+# Inversion requires recollection of offset and regularity
+# Warping between specific time points numeric 0-n for n warp points, decimals indicate time between warp points
+transform_mixtime <- function (tz) {
+  common_attr <- NULL
+
+  # To original granularity
+  to_mixtime <- function(x) {
+    if(inherits(x, "mixtime")) return(x)
+
+    attributes(x) <- common_attr
+
+    # Less than perfect ('hack')
+    #
+    # The default coord limits are
+    # `transformation$transform(transformation$inverse(c(NA_real_, NA_real_)))`,
+    # which then also requires `Scale$transform$transform` to return atomic
+    # numeric values :(
+    #
+    # A non-mixtime object is required here in order to have `ifelse()` work
+    # correctly in `ggplot2:::expand_limits_continuous_trans()`
+    #
+    # This is also required for other aspects of ggplot2, such as for `pretty()`
+    # to work in computing the default breaks.
+    return(x)
+  }
+  # To common granularity (possibly with alignment?)
+  # If local time is set, then an offset argument should be passed into the geom?
+  from_mixtime <- function(x) {
+    if(!inherits(x, "mixtime")) return(x)
+    if (length(attr(x, "v")) != 1L) {
+      cli::cli_abort("{.fun transform_mixtime} currently works with single granularity vectors only.")
+    }
+    common_attr <<- attributes(attr(x, "v")[[1L]])
+    return(x)
+
+    # structure(as.numeric(vecvec::unvecvec(x)), names = names(x), x = x)
+  }
+  scales::new_transform(
+    "mixtime", transform = "from_mixtime", inverse = "to_mixtime",
+    breaks = scales::breaks_pretty()#,
+    #domain = to_mixtime(c(-Inf, Inf))
+  )
+}
+
+
+clock_offset <- function(x) {
+  tryCatch(
+    clock::zoned_time_info(
+      clock::as_zoned_time(x)
+    )$offset,
+    error = function(e) 0
+  )
+}
+tz_offset <- function(x) {
+  if(!mixtime::is_mixtime(x)) {
+    cli::cli_warn("Missing timezone offset could not be calculated in the scale.")
+  }
+  attr(x, "v") <- lapply(attr(x, "v"), clock_offset)
+  as.numeric(vecvec::unvecvec(x))
+}
