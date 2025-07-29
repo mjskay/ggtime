@@ -1,6 +1,6 @@
 #' @export
 geom_time_line <- function(mapping = NULL, data = NULL, stat = "identity",
-                      position = "identity", na.rm = FALSE, orientation = NA,
+                      position = "time_civil", na.rm = FALSE, orientation = NA,
                       show.legend = NA, inherit.aes = TRUE, ...) {
   layer(
     data = data,
@@ -27,49 +27,53 @@ GeomTimeLine <- ggproto(
                         lineend = "butt", linejoin = "round", linemitre = 10,
                         na.rm = FALSE) {
     # TODO
-    # * Add multi-position if value is on the border of time zones.
+    # * Add multi-position if value is on the border of time zones
     # * Add gaps for implicit missing values
+
+    # If the data is regular across a timezone change (offset) then draw a dashed line
+    # Otherwise, there is a gap and there is no dashed timezone line
+
 
     # Check if time scale is civil not absolute
     # if(inherits(x_time, c("POSIXct","POSIXlt")))
 
-    tx <- panel_params$x$get_transformation()
-    x_time <- tx$inverse(data$x)
-
-    # Find timezone boundaries for time range plotted
-    time_lim <- clock::as_zoned_time(range(x_time))
-    tz_shifts <- list()
-    tz_time <- time_lim[1]
-    while((tz_info <- clock::zoned_time_info(tz_time))$end < time_lim[2]) {
-      tz_shifts[[length(tz_shifts) + 1L]] <- tz_info
-      tz_time <- tz_info$end
-    }
-    tz_shifts <- dplyr::bind_rows(tz_shifts, tz_info)
-
-    # Create civil time data
-
-    # needs refactoring for efficiency
-    match_before <- function(x, table) {
-      vapply(x, function(.) which(.<=table)[1], integer(1L))
-    }
-    tz_i <- match_before(data$x, unclass(as.POSIXct(tz_shifts$end)))
-
-    # match_between <- function(x, left, right) {
-    #   lapply(x, function(.) which(.>=left & .<=right))
+    # tx <- panel_params$x$get_transformation()
+    # x_time <- tx$inverse(data$x)
+    #
+    # # Find timezone boundaries for time range plotted
+    # time_lim <- clock::as_zoned_time(range(x_time))
+    # tz_shifts <- list()
+    # tz_time <- time_lim[1]
+    # while((tz_info <- clock::zoned_time_info(tz_time))$end < time_lim[2]) {
+    #   tz_shifts[[length(tz_shifts) + 1L]] <- tz_info
+    #   tz_time <- tz_info$end
     # }
-    # match_between(data$x, as.POSIXct(tz_shifts$begin), as.POSIXct(tz_shifts$end))
-
-
-    # is tz boundary
-    tz_boundaries <- match(clock::as_zoned_time(x_time), tz_shifts$begin)
-    tz_boundaries_i <- which(!is.na(tz_boundaries))
-
-    # augment data with tz lines
-    # if (any(!is.na(tz_boundaries)))
-    data <- data[rep(seq_len(nrow(data)), 1L + !is.na(tz_boundaries)),]
-    tz_jump_dest <- seq_along(tz_boundaries_i) + tz_boundaries_i
-    data$x[tz_jump_dest] <- data$x[tz_jump_dest] - diff(as.integer(tz_shifts$offset[tz_boundaries[tz_boundaries_i] - 0:1]))
-    data$linetype[tz_jump_dest-1] <- 2L
+    # tz_shifts <- dplyr::bind_rows(tz_shifts, tz_info)
+    #
+    # # Create civil time data
+    #
+    # # needs refactoring for efficiency
+    # match_before <- function(x, table) {
+    #   vapply(x, function(.) which(.<=table)[1], integer(1L))
+    # }
+    # tz_i <- match_before(data$x, unclass(as.POSIXct(tz_shifts$end)))
+    #
+    # # match_between <- function(x, left, right) {
+    # #   lapply(x, function(.) which(.>=left & .<=right))
+    # # }
+    # # match_between(data$x, as.POSIXct(tz_shifts$begin), as.POSIXct(tz_shifts$end))
+    #
+    #
+    # # is tz boundary
+    # tz_boundaries <- match(clock::as_zoned_time(x_time), tz_shifts$begin)
+    # tz_boundaries_i <- which(!is.na(tz_boundaries))
+    #
+    # # augment data with tz lines
+    # # if (any(!is.na(tz_boundaries)))
+    # data <- data[rep(seq_len(nrow(data)), 1L + !is.na(tz_boundaries)),]
+    # tz_jump_dest <- seq_along(tz_boundaries_i) + tz_boundaries_i
+    # data$x[tz_jump_dest] <- data$x[tz_jump_dest] - diff(as.integer(tz_shifts$offset[tz_boundaries[tz_boundaries_i] - 0:1]))
+    # data$linetype[tz_jump_dest-1] <- 2L
 
 
     if (!anyDuplicated(data$group)) {
@@ -104,7 +108,7 @@ GeomTimeLine <- ggproto(
     grid::segmentsGrob(
       munched$x[!end], munched$y[!end], munched$x[!start], munched$y[!start],
       default.units = "native", arrow = arrow,
-      gp = ggplot2::gg_par(
+      gp = gg_par(
         col = alpha(munched$colour, munched$alpha)[!end],
         fill = alpha(munched$fill, munched$alpha)[!end],
         lwd = munched$linewidth[!end],

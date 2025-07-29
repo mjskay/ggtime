@@ -1,5 +1,5 @@
 set_sec_axis <- function(sec.axis, scale) {
-  if (!is.waiver(sec.axis)) {
+  if (!is_waiver(sec.axis)) {
     if (scale$is_discrete()) {
       if (!identical(.subset2(sec.axis, "trans"), identity)) {
         cli::cli_abort("Discrete secondary axes must have the {.fn identity} transformation.")
@@ -21,3 +21,28 @@ ggplot_global <- list(
   y_aes = c("y", "ymin", "ymax", "yend", "yintercept",
             "ymin_final", "ymax_final", "lower", "middle", "upper", "y0")
 )
+
+gg_par <- function(..., stroke = NULL, pointsize = NULL) {
+  args <- rlang::list2(...)
+  args <- args[lengths(args) > 0]
+
+  if (!is.null(args$lwd)) {
+    args$lwd <- args$lwd * .pt
+  }
+  if (!is.null(stroke)) {
+    args$lwd <- stroke * .stroke / 2
+  }
+  if (!is.null(pointsize)) {
+    # Stroke is added around the outside of the point
+    stroke <- stroke %||% 0
+    stroke[is.na(stroke)] <- 0
+    args$fontsize <- pointsize * .pt + stroke * .stroke / 2
+  }
+  if (!is.null(args$lty) && anyNA(args$lty)) {
+    args$lty[is.na(args$lty)] <- if (is.character(args$lty)) "blank" else 0
+  }
+
+  rlang::inject(gpar(!!!args))
+}
+
+is_waiver <- function(x) inherits(x, "waiver")
