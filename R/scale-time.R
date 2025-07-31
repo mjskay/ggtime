@@ -139,7 +139,6 @@ mixtime_scale <- function(aesthetics, transform, trans = deprecated(),
   if (!is_waiver(time_labels)) {
     check_string(time_labels)
     labels <- function(self, x) {
-      tz <- self$timezone %||% "UTC"
       label_date(time_labels, tz)(x)
     }
   }
@@ -158,7 +157,7 @@ mixtime_scale <- function(aesthetics, transform, trans = deprecated(),
     minor_breaks = minor_breaks,
     labels = labels,
     guide = guide,
-    transform = transform_mixtime(timezone),
+    transform = transform_mixtime(),
     trans = trans,
     call = call,
     ...,
@@ -212,9 +211,16 @@ ScaleContinuousMixtime <- ggproto(
     df
   },
   transform = function(self, x) {
+    # Store common time type for default backtransformation, labels, and more.
+    if (length(attr(x, "v")) != 1L) {
+      cli::cli_abort("{.field mixtime} scales currently work with single-type vectors only.")
+    }
+    # TODO: make this optionally user-specified
+    self$ptype <- attributes(attr(x, "v")[[1L]])
+
+
     # Possibly redefine self$trans with new info from `x`
 
-    print("ScaleMixtime$transform")
     if (is_bare_numeric(x)) {
       cli::cli_abort(c(
         "A {.cls numeric} value was passed to a {.field mixtime} scale.",
@@ -225,7 +231,7 @@ ScaleContinuousMixtime <- ggproto(
     ggproto_parent(ScaleContinuous, self)$transform(x)
   },
   map = function(self, x, limits = self$get_limits()) {
-    print("ScaleMixtime$map")
+    # TODO: Check functionality of self$oob
     # self$oob(x, limits)
 
     if (mixtime::is_mixtime(x)) x <- as.numeric(vecvec::unvecvec(x))
@@ -259,7 +265,8 @@ ScaleContinuousMixtime <- ggproto(
 
 # Inversion requires recollection of offset and regularity
 # Warping between specific time points numeric 0-n for n warp points, decimals indicate time between warp points
-transform_mixtime <- function (tz) {
+transform_mixtime <- function () {
+  # TODO: replace common_attr with ptype provided by scale
   common_attr <- NULL
 
   # To original granularity
