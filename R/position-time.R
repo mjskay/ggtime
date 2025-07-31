@@ -35,9 +35,10 @@ position_time_absolute <- function() {
 #' @usage NULL
 #' @export
 PositionTimeAbsolute <- ggproto("PositionTimeAbsolute", Position,
-  required_aes = c("x|y", "xoffest|yoffset"),
+  required_aes = c("x|y"),
 
   compute_panel = function(self, data, params, scales) {
+    data$xoffset <- data$yoffset <- 0
     data
   }
 )

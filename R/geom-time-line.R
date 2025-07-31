@@ -23,11 +23,12 @@ geom_time_line <- function(mapping = NULL, data = NULL, stat = "identity",
 #' @export
 GeomTimeLine <- ggproto(
   "GeomTimeLine", GeomPath,
+  optional_aes = c("xoffset", "yoffset"),
   draw_panel = function(self, data, panel_params, coord, arrow = NULL, arrow.fill = NULL,
                         lineend = "butt", linejoin = "round", linemitre = 10,
                         na.rm = FALSE) {
     # TODO
-    # * Add multi-position if value is on the border of time zones
+    # * Add timezone dashed lines for y-axis offsets
     # * Add gaps for implicit missing values
 
     # If the data is regular across a timezone change (offset) then draw a dashed line
@@ -37,6 +38,7 @@ GeomTimeLine <- ggproto(
     tz_jumps <- c(FALSE, data$xoffset[-1] != data$xoffset[-nrow(data)])
     tz_jumps_i <- which(tz_jumps)
 
+    # TODO: Bug doesn't work with multiple tz_jumps
     data <- data[rep(seq_len(nrow(data)), 1L + tz_jumps),]
     tz_jump_dest <- seq_along(tz_jumps_i) + tz_jumps_i - 1
     data$x[tz_jump_dest] <- data$x[tz_jump_dest] + diff(data$xoffset[tz_jump_dest - (0:1)])
