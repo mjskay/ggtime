@@ -2,7 +2,7 @@
 
 <!-- README.md is generated from README.qmd. Please edit that file -->
 
-# ggtime <a href="https://ggtime.tidyverts.org"><img src="man/figures/logo.svg" align="right" height="139" alt="ggtime website" /></a>
+# ggtime <a href="https://pkg.mitchelloharawild.com/ggtime/"><img src="man/figures/logo.svg" align="right" height="139" alt="ggtime website" /></a>
 
 <!-- badges: start -->
 

@@ -1,11 +1,11 @@
-url: https://ggtime.tidyverts.org
+url: https://pkg.mitchelloharawild.com/ggtime/
 
 template:
   params:
     bootswatch: cosmo
   includes:
     in_header: |
-      <script defer data-domain="ggtime.tidyverts.org" src="https://track.mitchelloharawild.com/js/plausible.js"></script>
+      <script defer data-domain="pkg.mitchelloharawild.com" src="https://track.mitchelloharawild.com/js/plausible.js"></script>
 
 development:
   mode: auto
