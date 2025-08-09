@@ -38,31 +38,37 @@ You can install the development version of ggtime from
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("tidyverts/ggtime")
+remotes::install_github("mitchelloharawild/ggtime")
 ```
 
-## Example
+## Examples
 
-The simplest time series visualisation is the time plot, which can be
-created with the `autoplot()` plot helper function on a tsibble object.
+The simplest time series visualisation is the time plot, which shows
+time continuously on the x-axis with the measured variables on the
+y-axis. A time plot is useful for identifying patterns that persist over
+a long period of time, such as trends and seasonality. A time plot can
+be created from a tsibble with the `autoplot()` helper function.
 
 ``` r
 library(ggtime)
-library(tsibble)
 library(ggplot2)
-tsibbledata::aus_production %>% 
-  autoplot(Bricks)
+library(tsibble)
+
+tsibbledata::aus_production |>
+  autoplot(Beer)
 ```
 
 <img src="man/figures/README-timeplot-1.png" style="width:100.0%" />
 
-To view the shape of the annual seasonal pattern, a seasonal plot
-created with `gg_season()` is commonly used. This makes it easier to
-identify the peaks, troughts, and overall shape of the seasonality.
+To view the shape of the annual seasonal pattern, it is useful to use a
+seasonal plot which shows time cyclically on the x-axis. This makes it
+easier to identify the peaks, troughs, and overall shape of the
+seasonality. A seasonal plot is created from a tsibble with the
+`gg_season()` plot helper function.
 
 ``` r
-tsibbledata::aus_production %>% 
-  gg_season(Bricks)
+tsibbledata::aus_production |> 
+  gg_season(Beer)
 ```
 
 <img src="man/figures/README-seasonplot-1.png" style="width:100.0%" />
