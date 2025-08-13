@@ -291,6 +291,8 @@ transform_mixtime <- function () {
   }
   # To common granularity (possibly with alignment?)
   # If local time is set, then an offset argument should be passed into the geom?
+
+  # For aligning, find the range of times with a duration-based floor/ceiling.
   from_mixtime <- function(x) {
     if(!inherits(x, "mixtime")) return(x)
     if (length(attr(x, "v")) != 1L) {
