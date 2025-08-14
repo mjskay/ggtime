@@ -23,7 +23,7 @@ coord_loop <- function(
   coord = coord_cartesian()
 ) {
   # Start by assuming time = "x"
-  # TODO: Generalise to vertical calendars with time = "y"
+  # TODO: Generalise to vertical looping with time = "y"
   stopifnot(time == "x")
 
   ggplot2::ggproto(
@@ -62,7 +62,7 @@ CoordLoop <- function(coord) {
     },
     draw_panel = function(self, panel, params, theme) {
       if (!ggplot2::check_device("clippingPaths")) {
-        stop("Calendar coordinates requires R v4.2.0 or higher.")
+        stop("Looped coordinates requires R v4.2.0 or higher.")
       }
 
       # Get time range from x-axis for cutting
@@ -77,7 +77,6 @@ CoordLoop <- function(coord) {
       widths <- diff(plot_cuts)
       centers <- rowMeans(embed(plot_cuts, 2))
 
-      browser()
       panel <- ggproto_parent(coord, self)$draw_panel(panel, params, theme)
       # Draw the full poanel
       plot.new()
