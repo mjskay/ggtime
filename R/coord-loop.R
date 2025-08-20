@@ -64,16 +64,32 @@ CoordLoop <- function(coord) {
       # Calculate the panel parmeters as normal (without cutting)
       # Need to do this so that user-defined limits, scale limits, expand, etc
       # are all appropriately taken into account
-      uncut_params <- ggproto_parent(coord, self)$setup_panel_params(scale_x, scale_y, params)
+      uncut_params <- ggproto_parent(coord, self)$setup_panel_params(
+        scale_x,
+        scale_y,
+        params
+      )
 
       # Determine the cutpoints where we will loop
-      time_cuts <- cut_axis_time(uncut_params, self$time, self$time_loop)
+      if (ggplot2::is_waiver(self$loop)) {
+        self$loop <- cut_axis_time(uncut_params, self$time, self$time_loop)
+      }
 
       # Recalculate the panel parameters zoomed in on the first region.
       # Doing it this way should apply expand settings, etc, again.
-      self$limits[[self$time]] <- time_cuts[c(1,2)]   # comment out this line to disable zooming (for debug)
-      cut_params <- ggproto_parent(coord, self)$setup_panel_params(scale_x, scale_y, params)
-      cut_params$time_cuts <- time_cuts
+      # (comment out this line to disable zooming for debugging)
+      self$limits[[self$time]] <- c(
+        # Restart at the first time point
+        self$loop[1],
+        # End at the longest time point in the loop
+        self$loop[1] + max(diff(self$loop))
+      )
+      cut_params <- ggproto_parent(coord, self)$setup_panel_params(
+        scale_x,
+        scale_y,
+        params
+      )
+      cut_params$time_cuts <- self$loop
       cut_params
     },
 
@@ -94,24 +110,25 @@ CoordLoop <- function(coord) {
       # have been drawn into given where it is in the grob tree, which meant
       # it was always getting clipped. So I stuck to just repeatedly re-drawing
       # the same grob.
-      .viewport = switch(self$time,
-        x = viewport,
-        y = function(x, y, ...) viewport(y = x, x = y, ...)
-      )
+      .viewport = switch(self$time, x = viewport, y = function(x, y, ...) {
+        viewport(y = x, x = y, ...)
+      })
       panel_grob <- inject(grobTree(!!!panel))
       translated_panels <- lapply(
         head(cuts, -1),
-        function(x) grobTree(
-          panel_grob,
-          vp = .viewport(
-            unit(origin - x, "npc"),
-            unit(0, "npc"),
-            just = c(0, 0)
-            # Could clip here (as below) but that will clip inside the space
-            # added by `expand = `, so probably better not to
-            # clip = rectGrob(unit(x, "npc"), just = 0, width = unit(1, "npc"))
+        function(x) {
+          grobTree(
+            panel_grob,
+            vp = .viewport(
+              unit(origin - x, "npc"),
+              unit(0, "npc"),
+              just = c(0, 0)
+              # Could clip here (as below) but that will clip inside the space
+              # added by `expand = `, so probably better not to
+              # clip = rectGrob(unit(x, "npc"), just = 0, width = unit(1, "npc"))
+            )
           )
-        )
+        }
       )
 
       # # Uncomment for debug info --- region boundaries and centers
