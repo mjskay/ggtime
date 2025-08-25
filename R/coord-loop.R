@@ -1,20 +1,41 @@
 #' Looped coordinates
 #'
-#' @examples
+#' A coordinate system that creates looped time series visualizations by
+#' dividing the data into periods and overlaying them on top of each other.
 #'
+#' @param loop Cutpoints for looping. Use `waiver()` to automatically determine
+#'   cutpoints based on `time_loop`.
+#' @param time_loop Duration to loop by (e.g., "1 year", "6 months").
+#'   Use `waiver()` to disable automatic looping.
+#' @param time Which axis represents time ("x" or "y"). Default is "x".
+#' @param ljust Loop justification, a number between 0 and 1
+#'   indicating where the lines between looped positions are drawn
+#'   (0 indicates left, 1 indicates right, 0.5 indicates center).
+#' @param xlim,ylim Limits for the x and y axes.
+#' @param expand If `TRUE`, adds a small expansion factor to the limits.
+#'   If `FALSE`, uses exact limits.
+#' @param default Is this the default coordinate system? Used internally by ggplot2.
+#' @param clip Should drawing be clipped to the extent of the plot panel?
+#'   Either "on" or "off".
+#' @param coord The base coordinate system to use. Default is `coord_cartesian()`.
+#'
+#' @return A ggproto object representing the coordinate system.
+#'
+#' @examples
 #' library(ggplot2)
 #' p <- as_tsibble(USAccDeaths) |>
 #'   ggplot(aes(x = index, y = value)) +
 #'   geom_line()
 #'
 #' p
-#' p + coord_loop(period = "year")
+#' p + coord_loop(time_loop = "1 year")
 #'
 #' @export
 coord_loop <- function(
   loop = waiver(),
   time_loop = waiver(),
   time = "x",
+  ljust = 0.5,
   xlim = NULL,
   ylim = NULL,
   expand = FALSE,
@@ -28,6 +49,7 @@ coord_loop <- function(
     loop = loop,
     time_loop = time_loop,
     time = time,
+    ljust = ljust,
     limits = list(x = xlim, y = ylim),
     expand = expand,
     default = default,
@@ -77,7 +99,7 @@ CoordLoop <- function(coord) {
 
       # @mjskay TODO - add loop justification 'ljust = <0-1>'
       # Name at your discretion, essentially needs to adjust the limits and geom cuts/clips (rectangles)
-      # self$loop <- self$loop - ljust
+      self$loop <- self$loop - self$ljust
 
       # Recalculate the panel parameters zoomed in on the first region.
       # Doing it this way should apply expand settings, etc, again.

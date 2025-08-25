@@ -8,25 +8,54 @@ coord_loop(
   loop = waiver(),
   time_loop = waiver(),
   time = "x",
+  ljust = 0.5,
   xlim = NULL,
   ylim = NULL,
-  expand = TRUE,
+  expand = FALSE,
   default = FALSE,
   clip = "on",
   coord = coord_cartesian()
 )
 }
+\arguments{
+\item{loop}{Cutpoints for looping. Use \code{waiver()} to automatically determine
+cutpoints based on \code{time_loop}.}
+
+\item{time_loop}{Duration to loop by (e.g., "1 year", "6 months").
+Use \code{waiver()} to disable automatic looping.}
+
+\item{time}{Which axis represents time ("x" or "y"). Default is "x".}
+
+\item{ljust}{Loop justification, a number between 0 and 1
+indicating where the lines between looped positions are drawn
+(0 indicates left, 1 indicates right, 0.5 indicates center).}
+
+\item{xlim, ylim}{Limits for the x and y axes.}
+
+\item{expand}{If \code{TRUE}, adds a small expansion factor to the limits.
+If \code{FALSE}, uses exact limits.}
+
+\item{default}{Is this the default coordinate system? Used internally by ggplot2.}
+
+\item{clip}{Should drawing be clipped to the extent of the plot panel?
+Either "on" or "off".}
+
+\item{coord}{The base coordinate system to use. Default is \code{coord_cartesian()}.}
+}
+\value{
+A ggproto object representing the coordinate system.
+}
 \description{
-Looped coordinates
+A coordinate system that creates looped time series visualizations by
+dividing the data into periods and overlaying them on top of each other.
 }
 \examples{
-
 library(ggplot2)
 p <- as_tsibble(USAccDeaths) |>
   ggplot(aes(x = index, y = value)) +
   geom_line()
 
 p
-p + coord_loop(period = "year")
+p + coord_loop(time_loop = "1 year")
 
 }
