@@ -75,6 +75,10 @@ CoordLoop <- function(coord) {
         self$loop <- cut_axis_time(uncut_params, self$time, self$time_loop)
       }
 
+      # @mjskay TODO - add loop justification 'ljust = <0-1>'
+      # Name at your discretion, essentially needs to adjust the limits and geom cuts/clips (rectangles)
+      # self$loop <- self$loop - ljust
+
       # Recalculate the panel parameters zoomed in on the first region.
       # Doing it this way should apply expand settings, etc, again.
       # (comment out this line to disable zooming for debugging)
