@@ -1,3 +1,18 @@
+#' Position adjustments for time data
+#'
+#' These position adjustments handle time data with different timezone behaviors:
+#' * `position_time_civil()` applies timezone offsets to display times in their
+#'   local civil time while keeping the underlying scale in UTC
+#' * `position_time_absolute()` displays times in absolute UTC without any
+#'   timezone adjustments
+#'
+#' @name PositionTime
+#' @aliases position_time_civil position_time_absolute
+#' @export position_time_civil position_time_absolute
+NULL
+
+#' @rdname PositionTime
+#' @export
 position_time_civil <- function() {
   PositionTimeCivil
 }
@@ -42,6 +57,8 @@ PositionTimeCivil <- ggproto(
   }
 )
 
+#' @rdname PositionTime
+#' @export
 position_time_absolute <- function() {
   PositionTimeAbsolute
 }
