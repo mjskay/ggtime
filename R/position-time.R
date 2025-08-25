@@ -35,11 +35,13 @@ PositionTimeCivil <- ggproto(
       data$xoffset <- gmt_offset(scales$x$get_transformation()$inverse(
         data$x
       ))
+      scales$x$timezone <- "UTC"
     }
     if (inherits(scales$y, "ScaleContinuousDatetime")) {
       data$yoffset <- gmt_offset(scales$y$get_transformation()$inverse(
         data$y
       ))
+      scales$y$timezone <- "UTC"
     }
 
     # Apply offset to x/y positions
@@ -50,7 +52,7 @@ PositionTimeCivil <- ggproto(
       data$y <- data$y + data$yoffset
     }
 
-    # TODO: Update scale to enforce labelling in UTC time
+    # TODO: Update mixtime scales to enforce labelling in UTC time
     # (since tz is handled by position offsets)
 
     data
