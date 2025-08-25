@@ -338,11 +338,9 @@ transform_mixtime <- function() {
 }
 
 
-clock_offset <- function(x) {
+gmt_offset <- function(x) {
   tryCatch(
-    clock::zoned_time_info(
-      clock::as_zoned_time(x)
-    )$offset,
+    as.POSIXlt(x)$gmtoff,
     error = function(e) rep(0, length(x))
   )
 }
@@ -352,6 +350,6 @@ tz_offset <- function(x) {
       "Missing timezone offset could not be calculated in the scale."
     )
   }
-  attr(x, "v") <- lapply(attr(x, "v"), clock_offset)
+  attr(x, "v") <- lapply(attr(x, "v"), gmt_offset)
   as.numeric(vecvec::unvecvec(x))
 }
