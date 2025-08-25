@@ -33,25 +33,24 @@
 #'
 #' @export
 #' @rdname scale_mixtime
-scale_x_mixtime <- function(name = waiver(),
-                         breaks = waiver(),
-                         time_breaks = waiver(),
-                         labels = waiver(),
-                         time_labels = waiver(),
-                         minor_breaks = waiver(),
-                         time_minor_breaks = waiver(),
-                         civil_time = TRUE,
-                         # loops = waiver(),
-                         # time_loops = waiver(),
-                         warps = waiver(),
-                         time_warps = waiver(),
-                         limits = NULL,
-                         expand = waiver(),
-                         oob = scales::censor,
-                         guide = waiver(),
-                         position = "bottom",
-                         sec.axis = waiver()) {
-
+scale_x_mixtime <- function(
+  name = waiver(),
+  breaks = waiver(),
+  time_breaks = waiver(),
+  labels = waiver(),
+  time_labels = waiver(),
+  minor_breaks = waiver(),
+  time_minor_breaks = waiver(),
+  common_time = waiver(),
+  warps = waiver(),
+  time_warps = waiver(),
+  limits = NULL,
+  expand = waiver(),
+  oob = scales::censor,
+  guide = waiver(),
+  position = "bottom",
+  sec.axis = waiver()
+) {
   sc <- mixtime_scale(
     aesthetics = ggplot_global$x_aes,
     transform = "mixtime",
@@ -116,17 +115,31 @@ scale_x_mixtime <- function(name = waiver(),
 
 #' @export
 #' @keywords internal
-mixtime_scale <- function(aesthetics, transform, trans = deprecated(),
-                           palette, breaks = pretty_breaks(), minor_breaks = waiver(),
-                           labels = waiver(), time_breaks = waiver(),
-                           time_labels = waiver(),
-                           time_minor_breaks = waiver(), timezone = NULL,
-                           guide = "legend", call = caller_call(), ...) {
+mixtime_scale <- function(
+  aesthetics,
+  transform,
+  trans = deprecated(),
+  palette,
+  breaks = pretty_breaks(),
+  minor_breaks = waiver(),
+  labels = waiver(),
+  time_breaks = waiver(),
+  time_labels = waiver(),
+  time_minor_breaks = waiver(),
+  timezone = NULL,
+  guide = "legend",
+  call = caller_call(),
+  ...
+) {
   call <- call %||% current_call()
 
   # Backward compatibility
-  if (is.character(breaks)) breaks <- breaks_width(breaks)
-  if (is.character(minor_breaks)) minor_breaks <- breaks_width(minor_breaks)
+  if (is.character(breaks)) {
+    breaks <- breaks_width(breaks)
+  }
+  if (is.character(minor_breaks)) {
+    minor_breaks <- breaks_width(minor_breaks)
+  }
 
   if (!is_waiver(time_breaks)) {
     # check_string(cal_breaks)
@@ -134,7 +147,7 @@ mixtime_scale <- function(aesthetics, transform, trans = deprecated(),
   }
   if (!is_waiver(time_minor_breaks)) {
     # check_string(cal_minor_breaks)
-    minor_breaks <- breaks_width(time_minor_breaks/zip)
+    minor_breaks <- breaks_width(time_minor_breaks / zip)
   }
   if (!is_waiver(time_labels)) {
     check_string(time_labels)
@@ -177,7 +190,8 @@ scale_type.mixtime <- function(x) c("mixtime", "continuous")
 #' @usage NULL
 #' @export
 ScaleContinuousMixtime <- ggproto(
-  "ScaleContinuousMixtime", ScaleContinuous,
+  "ScaleContinuousMixtime",
+  ScaleContinuous,
   secondary.axis = waiver(),
   timezone = NULL,
   range = MixtimeRange$new(),
@@ -213,19 +227,23 @@ ScaleContinuousMixtime <- ggproto(
   transform = function(self, x) {
     # Store common time type for default backtransformation, labels, and more.
     if (length(attr(x, "v")) != 1L) {
-      cli::cli_abort("{.field mixtime} scales currently work with single-type vectors only.")
+      cli::cli_abort(
+        "{.field mixtime} scales currently work with single-type vectors only."
+      )
     }
     # TODO: make this optionally user-specified
     self$ptype <- attributes(attr(x, "v")[[1L]])
 
-
     # Possibly redefine self$trans with new info from `x`
 
     if (is_bare_numeric(x)) {
-      cli::cli_abort(c(
-        "A {.cls numeric} value was passed to a {.field mixtime} scale.",
-        i = "Please use the mixtime package to create time values."
-      ), call = self$call)
+      cli::cli_abort(
+        c(
+          "A {.cls numeric} value was passed to a {.field mixtime} scale.",
+          i = "Please use the mixtime package to create time values."
+        ),
+        call = self$call
+      )
     }
     # ggtime:::calendar_wrap(x)
     ggproto_parent(ScaleContinuous, self)$transform(x)
@@ -234,7 +252,9 @@ ScaleContinuousMixtime <- ggproto(
     # TODO: Check functionality of self$oob
     # self$oob(x, limits)
 
-    if (mixtime::is_mixtime(x)) x <- as.numeric(vecvec::unvecvec(x))
+    if (mixtime::is_mixtime(x)) {
+      x <- as.numeric(vecvec::unvecvec(x))
+    }
     x
   },
   break_info = function(self, range = NULL) {
@@ -260,18 +280,19 @@ ScaleContinuousMixtime <- ggproto(
   #     ggproto_parent(ScaleContinuous, self)$make_sec_title(title)
   #   }
   # }
-
 )
 
 # Inversion requires recollection of offset and regularity
 # Warping between specific time points numeric 0-n for n warp points, decimals indicate time between warp points
-transform_mixtime <- function () {
+transform_mixtime <- function() {
   # TODO: replace common_attr with ptype provided by scale
   common_attr <- NULL
 
   # To original granularity
   to_mixtime <- function(x) {
-    if(inherits(x, "mixtime")) return(x)
+    if (inherits(x, "mixtime")) {
+      return(x)
+    }
 
     attributes(x) <- common_attr
 
@@ -294,9 +315,13 @@ transform_mixtime <- function () {
 
   # For aligning, find the range of times with a duration-based floor/ceiling.
   from_mixtime <- function(x) {
-    if(!inherits(x, "mixtime")) return(x)
+    if (!inherits(x, "mixtime")) {
+      return(x)
+    }
     if (length(attr(x, "v")) != 1L) {
-      cli::cli_abort("{.fun transform_mixtime} currently works with single granularity vectors only.")
+      cli::cli_abort(
+        "{.fun transform_mixtime} currently works with single granularity vectors only."
+      )
     }
     common_attr <<- attributes(attr(x, "v")[[1L]])
     return(x)
@@ -304,8 +329,10 @@ transform_mixtime <- function () {
     # structure(as.numeric(vecvec::unvecvec(x)), names = names(x), x = x)
   }
   scales::new_transform(
-    "mixtime", transform = "from_mixtime", inverse = "to_mixtime",
-    breaks = scales::breaks_pretty()#,
+    "mixtime",
+    transform = "from_mixtime",
+    inverse = "to_mixtime",
+    breaks = scales::breaks_pretty() #,
     #domain = to_mixtime(c(-Inf, Inf))
   )
 }
@@ -320,8 +347,10 @@ clock_offset <- function(x) {
   )
 }
 tz_offset <- function(x) {
-  if(!mixtime::is_mixtime(x)) {
-    cli::cli_warn("Missing timezone offset could not be calculated in the scale.")
+  if (!mixtime::is_mixtime(x)) {
+    cli::cli_warn(
+      "Missing timezone offset could not be calculated in the scale."
+    )
   }
   attr(x, "v") <- lapply(attr(x, "v"), clock_offset)
   as.numeric(vecvec::unvecvec(x))
