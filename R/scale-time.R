@@ -214,6 +214,8 @@ ScaleContinuousMixtime <- ggproto(
     # currently working in ggplot2
     missing_aes <- setdiff(names(PositionTimeCivil$default_aes), names(df))
 
+    # TODO: Add gap filling for implicit missing values here?
+    # Or should that be in position? Position may be too late to have access to enough data.
     df <- ggproto_parent(ScaleContinuous, self)$transform_df(df)
 
     # Match missing_aes offset positions to transformed scales
