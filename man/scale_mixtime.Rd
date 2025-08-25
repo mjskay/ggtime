@@ -12,7 +12,7 @@ scale_x_mixtime(
   time_labels = waiver(),
   minor_breaks = waiver(),
   time_minor_breaks = waiver(),
-  civil_time = TRUE,
+  common_time = waiver(),
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -65,10 +65,6 @@ output
 \item{time_minor_breaks}{A \if{html}{\out{<duration>}} giving the distance between minor breaks like
 "2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
 specified, \code{time_minor_breaks} wins.}
-
-\item{civil_time}{The positioning of zoned time. If TRUE time is positioned
-uses the local/wall time (the default), otherwise time will be shown in with
-absolute/continuous UTC time.}
 
 \item{warps}{Warp the time scale to have a consistent length, one of:
 \itemize{
@@ -132,6 +128,10 @@ output
 \item{time_loops}{A \url{mixtime::duration} giving the distance between temporal
 loops like "2 weeks", or "10 years". If both \code{loops} and \code{time_loops} are
 specified, \code{time_loops} wins.}
+
+\item{civil_time}{The positioning of zoned time. If TRUE time is positioned
+uses the local/wall time (the default), otherwise time will be shown in with
+absolute/continuous UTC time.}
 }
 \description{
 These are the default scales for mixtime vectors, which are usually used for
