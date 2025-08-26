@@ -34,11 +34,18 @@
 #'   facet_calendar(vars(Date), nrow = 2) +
 #'   theme(legend.position = "bottom")
 #' }
-facet_calendar <- function(date, format = "%b %d",
+facet_calendar <- function(
+  date,
+  format = "%b %d",
   week_start = getOption("lubridate.week.start", 1),
-  nrow = NULL, ncol = NULL, scales = "fixed", shrink = TRUE, dir = "h",
-  labeller = "label_value", strip.position = "top") {
-
+  nrow = NULL,
+  ncol = NULL,
+  scales = "fixed",
+  shrink = TRUE,
+  dir = "h",
+  labeller = "label_value",
+  strip.position = "top"
+) {
   scales <- match.arg(scales, c("fixed", "free_x", "free_y", "free"))
   dir <- match.arg(dir, c("h", "v"))
   free <- list(
@@ -46,25 +53,30 @@ facet_calendar <- function(date, format = "%b %d",
     y = any(scales %in% c("free_y", "free"))
   )
 
-  facet <- facet_wrap(~ .label, nrow = nrow, ncol = ncol, scales = scales,
-    shrink = shrink, strip.position = strip.position)
+  facet <- facet_wrap(
+    ~.label,
+    nrow = nrow,
+    ncol = ncol,
+    scales = scales,
+    shrink = shrink,
+    strip.position = strip.position
+  )
   facet$params$date <- as_facet_date(date)
   facet$params$format <- format
   facet$params$week_start <- week_start
   facet$params$free <- free
   facet$params$dir <- dir
   facet$params$labeller <- labeller
-  ggproto(NULL, FacetCalendar,
-    shrink = shrink,
-    params = facet$params
-  )
+  ggproto(NULL, FacetCalendar, shrink = shrink, params = facet$params)
 }
 
 #' @rdname facet-calendar
 #' @format NULL
 #' @usage NULL
 #' @export
-FacetCalendar <- ggproto("FacetCalendar", FacetWrap,
+FacetCalendar <- ggproto(
+  "FacetCalendar",
+  FacetWrap,
   compute_layout = function(data, params) {
     eval_date <- eval_tidy(params$date, data = data[[1]])
     date_chr <- expr_text(params$date)
@@ -79,13 +91,18 @@ FacetCalendar <- ggproto("FacetCalendar", FacetWrap,
     if (NROW(data[[1]]) == 0L) {
       abort("Facet calendar must have at least one date.")
     }
-    layout <- setup_calendar.monthly(eval_date, dir = params$dir,
-      week_start = params$week_start, nrow = params$nrow, ncol = params$ncol)
+    layout <- setup_calendar.monthly(
+      eval_date,
+      dir = params$dir,
+      week_start = params$week_start,
+      nrow = params$nrow,
+      ncol = params$ncol
+    )
     n <- NROW(layout)
 
     layout %>%
       dplyr::mutate(
-        !! date_chr := PANEL,
+        !!date_chr := PANEL,
         .label = format.Date(PANEL, format = params$format),
         PANEL = factor(seq_len(n), levels = seq_len(n)),
         SCALE_X = ifelse(params$free$x, seq_len(n), 1L),
@@ -96,16 +113,34 @@ FacetCalendar <- ggproto("FacetCalendar", FacetWrap,
   map_data = function(data, layout, params) {
     date_chr <- expr_text(params$date)
     if (is_call(params$date)) {
-      data <- dplyr::mutate(data, !! date_chr := !! params$date)
+      data <- dplyr::mutate(data, !!date_chr := !!params$date)
     }
     dplyr::left_join(data, layout, by = date_chr)
   },
 
-  draw_panels = function(self, panels, layout, x_scales, y_scales, ranges,
-    coord, data, theme, params) {
-
-    canvas <- ggproto_parent(FacetWrap, self)$draw_panels(panels, layout,
-      x_scales, y_scales, ranges, coord, data, theme, params)
+  draw_panels = function(
+    self,
+    panels,
+    layout,
+    x_scales,
+    y_scales,
+    ranges,
+    coord,
+    data,
+    theme,
+    params
+  ) {
+    canvas <- ggproto_parent(FacetWrap, self)$draw_panels(
+      panels,
+      layout,
+      x_scales,
+      y_scales,
+      ranges,
+      coord,
+      data,
+      theme,
+      params
+    )
 
     space_x <- theme$panel.spacing.x %||% theme$panel.spacing
     row_spacer <- 2 * space_x
@@ -164,13 +199,17 @@ setup_calendar.daily <- function(x, dir = "h", ...) {
   nfacets <- length(month_x)
   seq_facets <- seq_len(nfacets)
   days_x <- unname(lubridate::days_in_month(month_x)) # d # unname() get rid of rlang warning
-  counter <- map2( # g
-    .x = month_x, .y = days_x, function(.x, .y) .x + 0:(.y - 1)
+  counter <- map2(
+    # g
+    .x = month_x,
+    .y = days_x,
+    function(.x, .y) .x + 0:(.y - 1)
   )
   # if dir == "h"
   row_idx <- list(rep.int(seq_facets, days_x))
   col_idx <- lapply(days_x, seq_len)
-  if (dir == "v") { # reverse col_idx and row_idx when direction is vertical
+  if (dir == "v") {
+    # reverse col_idx and row_idx when direction is vertical
     col_tmp <- row_idx
     row_idx <- col_idx
     col_idx <- col_tmp
@@ -185,8 +224,8 @@ setup_calendar.daily <- function(x, dir = "h", ...) {
 setup_calendar.weekly <- function(x, dir = "h", ...) {
   # x is a vector of unique dates
   x <- unique(x)
-  init_counter <- lubridate::wday(min_na(x), week_start = 1)
-  wk_x <- isoweek(x)
+  init_counter <- lubridate::wday(min(x, na.rm = TRUE), week_start = 1)
+  wk_x <- lubridate::isoweek(x)
 
   # only starts with Monday for ISO week
   col_idx <- lubridate::wday(x, week_start = 1)
@@ -194,7 +233,8 @@ setup_calendar.weekly <- function(x, dir = "h", ...) {
   # if dir == "h"
   rle_x <- rle(wk_x)
   row_idx <- rep.int(seq_along(rle_x$values), rle_x$lengths)
-  if (dir == "v") { # reverse col_idx and row_idx when direction is vertical
+  if (dir == "v") {
+    # reverse col_idx and row_idx when direction is vertical
     col_tmp <- row_idx
     row_idx <- col_idx
     col_idx <- col_tmp
@@ -202,8 +242,14 @@ setup_calendar.weekly <- function(x, dir = "h", ...) {
   dplyr::tibble(ROW = row_idx, COL = col_idx, PANEL = counter)
 }
 
-setup_calendar.monthly <- function(x, dir = "h", week_start = 1,
-                                   nrow = NULL, ncol = NULL, ...) {
+setup_calendar.monthly <- function(
+  x,
+  dir = "h",
+  week_start = 1,
+  nrow = NULL,
+  ncol = NULL,
+  ...
+) {
   # x is a vector of unique dates
   x <- unique(x)
   month_x <- unique(x - lubridate::mday(x) + 1)
@@ -217,20 +263,28 @@ setup_calendar.monthly <- function(x, dir = "h", week_start = 1,
   ncells <- max_wks * ndays
   first_wday <- lubridate::wday(month_x, week_start = week_start) # k
   counter_date <- map2(
-    .x = month_x, .y = days_x, function(.x, .y) .x + 0:(.y - 1)
+    .x = month_x,
+    .y = days_x,
+    function(.x, .y) .x + 0:(.y - 1)
   )
-  counter <- map2( # g
-    .x = first_wday, .y = days_x, function(.x, .y) .x + 0:(.y - 1)
+  counter <- map2(
+    # g
+    .x = first_wday,
+    .y = days_x,
+    function(.x, .y) .x + 0:(.y - 1)
   )
-  row_idx <- lapply( # i
+  row_idx <- lapply(
+    # i
     counter,
     function(x) ifelse(x == ncells, max_wks, ceiling((x %% ncells) / ndays))
   )
-  col_idx <- lapply( # j
+  col_idx <- lapply(
+    # j
     counter,
     function(x) ifelse(x %% ndays == 0, ndays, x %% ndays)
   )
-  if (dir == "v") { # reverse col_idx and row_idx when direction is vertical
+  if (dir == "v") {
+    # reverse col_idx and row_idx when direction is vertical
     col_tmp <- row_idx
     row_idx <- col_idx
     col_idx <- col_tmp
@@ -242,17 +296,26 @@ setup_calendar.monthly <- function(x, dir = "h", week_start = 1,
   n_idx <- rep.int(1:nrow, times = c(rep.int(ncol, nrow - 1), last_rep))
   if (dir == "h") {
     row_idx[] <- map2(
-      .x = row_idx, .y = n_idx, function(.x, .y) .x + max_wks * (.y - 1)
+      .x = row_idx,
+      .y = n_idx,
+      function(.x, .y) .x + max_wks * (.y - 1)
     )
     col_idx[] <- map2(
-      .x = col_idx, .y = m_idx, function(.x, .y) .x + ndays * (.y - 1)
+      .x = col_idx,
+      .y = m_idx,
+      function(.x, .y) .x + ndays * (.y - 1)
     )
-  } else { # dir = "v"
+  } else {
+    # dir = "v"
     row_idx[] <- map2(
-      .x = row_idx, .y = n_idx, function(.x, .y) .x + ndays * (.y - 1)
+      .x = row_idx,
+      .y = n_idx,
+      function(.x, .y) .x + ndays * (.y - 1)
     )
     col_idx[] <- map2(
-      .x = col_idx, .y = m_idx, function(.x, .y) .x + max_wks * (.y - 1)
+      .x = col_idx,
+      .y = m_idx,
+      function(.x, .y) .x + max_wks * (.y - 1)
     )
   }
   dplyr::tibble(
@@ -268,5 +331,3 @@ setup_calendar.monthly <- function(x, dir = "h", week_start = 1,
 map2 <- function(.x, .y, .f, ...) {
   Map(.f, .x, .y, ...)
 }
-
-
