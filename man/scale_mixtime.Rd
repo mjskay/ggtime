@@ -37,11 +37,13 @@ omitted.}
 \item A function that takes the limits as input and returns breaks as output
 }}
 
-\item{time_breaks}{A \if{html}{\out{<duration>}} giving the distance between breaks like
+\item{time_breaks}{A \link[mixtime:duration]{mixtime::duration} giving the distance between breaks like
 "2 weeks", or "10 years". If both \code{breaks} and \code{time_breaks} are specified,
 \code{time_breaks} wins.}
 
-\item{labels}{One of:
+\item{labels}{One of the options below. Please note that when \code{labels} is a
+vector, it is highly recommended to also set the \code{breaks} argument as a
+vector to protect against unintended mismatches.
 \itemize{
 \item \code{NULL} for no labels
 \item \code{waiver()} for the default labels computed by the
@@ -53,6 +55,9 @@ as output. Also accepts rlang \link[rlang:as_function]{lambda} function
 notation.
 }}
 
+\item{time_labels}{Uses strftime strings or similar to format the labels from
+the time points.}
+
 \item{minor_breaks}{One of:
 \itemize{
 \item \code{NULL} for no breaks
@@ -62,9 +67,12 @@ notation.
 output
 }}
 
-\item{time_minor_breaks}{A \if{html}{\out{<duration>}} giving the distance between minor breaks like
+\item{time_minor_breaks}{A \link[mixtime:duration]{mixtime::duration} giving the distance between minor breaks like
 "2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
 specified, \code{time_minor_breaks} wins.}
+
+\item{common_time}{Acts like a vctrs \code{ptype} defining the common chronon to
+use for mixed granularity. The default automatically selects it.}
 
 \item{warps}{Warp the time scale to have a consistent length, one of:
 \itemize{
@@ -74,7 +82,7 @@ specified, \code{time_minor_breaks} wins.}
 output
 }}
 
-\item{time_warps}{A \if{html}{\out{<duration>}} giving the distance between temporal warping
+\item{time_warps}{A \link[mixtime:duration]{mixtime::duration} giving the distance between temporal warping
 like "2 weeks", or "10 years". If both \code{warps} and \code{time_warps} are
 specified, \code{time_warps} wins.}
 
@@ -116,22 +124,6 @@ bounds values with \code{NA}.
 \code{left} or \code{right} for y axes, \code{top} or \code{bottom} for x axes.}
 
 \item{sec.axis}{\code{\link[ggplot2:sec_axis]{sec_axis()}} is used to specify a secondary axis.}
-
-\item{loops}{Loop the time scale around a calendrical granularity, one of:
-\itemize{
-\item \code{NULL} or \code{waiver()} for no wrapping (the default)
-\item A \code{mixtime} vector giving positions of wrapping points
-\item A function that takes the limits as input and returns wrapping points as
-output
-}}
-
-\item{time_loops}{A \url{mixtime::duration} giving the distance between temporal
-loops like "2 weeks", or "10 years". If both \code{loops} and \code{time_loops} are
-specified, \code{time_loops} wins.}
-
-\item{civil_time}{The positioning of zoned time. If TRUE time is positioned
-uses the local/wall time (the default), otherwise time will be shown in with
-absolute/continuous UTC time.}
 }
 \description{
 These are the default scales for mixtime vectors, which are usually used for

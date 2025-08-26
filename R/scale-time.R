@@ -5,31 +5,24 @@
 #' `scale_*_mixtime`.
 #'
 #' @inheritParams ggplot2::scale_x_date
-#' @param time_breaks A <duration> giving the distance between breaks like
+#' @param time_breaks A [mixtime::duration] giving the distance between breaks like
 #' "2 weeks", or "10 years". If both `breaks` and `time_breaks` are specified,
 #' `time_breaks` wins.
-#' @param time_minor_breaks A <duration> giving the distance between minor breaks like
+#' @param time_minor_breaks A [mixtime::duration] giving the distance between minor breaks like
 #' "2 weeks", or "10 years". If both `minor_breaks` and `time_minor_breaks` are
 #' specified, `time_minor_breaks` wins.
-#' @param loops Loop the time scale around a calendrical granularity, one of:
-#'   - `NULL` or `waiver()` for no wrapping (the default)
-#'   - A `mixtime` vector giving positions of wrapping points
-#'   - A function that takes the limits as input and returns wrapping points as
-#'     output
-#' @param time_loops A <mixtime::duration> giving the distance between temporal
-#' loops like "2 weeks", or "10 years". If both `loops` and `time_loops` are
-#' specified, `time_loops` wins.
+#' @param common_time Acts like a vctrs `ptype` defining the common chronon to
+#' use for mixed granularity. The default automatically selects it.
+#' @param time_labels Uses strftime strings or similar to format the labels from
+#' the time points.
 #' @param warps Warp the time scale to have a consistent length, one of:
 #'   - `NULL` or `waiver()` for no warping (the default)
 #'   - A `mixtime` vector giving positions of warping points
 #'   - A function that takes the limits as input and returns warping points as
 #'     output
-#' @param time_warps A <duration> giving the distance between temporal warping
+#' @param time_warps A [mixtime::duration] giving the distance between temporal warping
 #' like "2 weeks", or "10 years". If both `warps` and `time_warps` are
 #' specified, `time_warps` wins.
-#' @param civil_time The positioning of zoned time. If TRUE time is positioned
-#' uses the local/wall time (the default), otherwise time will be shown in with
-#' absolute/continuous UTC time.
 #'
 #' @export
 #' @rdname scale_mixtime
@@ -113,14 +106,14 @@ scale_x_mixtime <- function(
 #   set_sec_axis(sec.axis, sc)
 # }
 
-#' @export
+#' @importFrom scales breaks_width
 #' @keywords internal
 mixtime_scale <- function(
   aesthetics,
   transform,
   trans = deprecated(),
   palette,
-  breaks = pretty_breaks(),
+  breaks = scales::breaks_pretty(),
   minor_breaks = waiver(),
   labels = waiver(),
   time_breaks = waiver(),
@@ -142,17 +135,17 @@ mixtime_scale <- function(
   }
 
   if (!is_waiver(time_breaks)) {
-    # check_string(cal_breaks)
+    # TODO: Validate input as <duration>
     breaks <- breaks_width(time_breaks)
   }
   if (!is_waiver(time_minor_breaks)) {
-    # check_string(cal_minor_breaks)
-    minor_breaks <- breaks_width(time_minor_breaks / zip)
+    # TODO: Validate input as <duration>
+    minor_breaks <- breaks_width(time_minor_breaks)
   }
   if (!is_waiver(time_labels)) {
-    check_string(time_labels)
+    # TODO: Validate input as <duration>
     labels <- function(self, x) {
-      label_date(time_labels, tz)(x)
+      scales::label_date(time_labels, timezone)(x)
     }
   }
 
@@ -186,9 +179,7 @@ mixtime_scale <- function(
 #' @export
 scale_type.mixtime <- function(x) c("mixtime", "continuous")
 
-#' @format NULL
-#' @usage NULL
-#' @export
+#' @keywords internal
 ScaleContinuousMixtime <- ggproto(
   "ScaleContinuousMixtime",
   ScaleContinuous,
