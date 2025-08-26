@@ -10,3 +10,4 @@
 ^CRAN-SUBMISSION$
 ^\.vscode$
 ^[.]?air[.]toml$
+^hex$
