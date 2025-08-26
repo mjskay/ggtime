@@ -55,10 +55,12 @@ autoplot.dcmp_ts <- function(
   )
 
   if (has_dist <- inherits(object[[".val"]], "distribution")) {
+    rlang::check_installed("distributional")
+    rlang::check_installed("ggdist")
     interval_data <- as_tibble(object)
     interval_data[paste0(level, "%")] <- lapply(
       level,
-      hilo,
+      ggdist::hilo,
       x = interval_data[[".val"]]
     )
     interval_data <- tidyr::pivot_longer(
@@ -127,12 +129,12 @@ autoplot.dcmp_ts <- function(
     ymin <- ymax <- center <- diff <- NULL
 
     min_fn <- if (has_dist) {
-      function(x, ...) min(quantile(x, (100 - max(level)) / 200), ...)
+      function(x, ...) min(stats::quantile(x, (100 - max(level)) / 200), ...)
     } else {
       min
     }
     max_fn <- if (has_dist) {
-      function(x, ...) max(quantile(x, (100 + max(level)) / 200), ...)
+      function(x, ...) max(stats::quantile(x, (100 + max(level)) / 200), ...)
     } else {
       max
     }
