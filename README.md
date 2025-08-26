@@ -6,11 +6,10 @@
 
 <!-- badges: start -->
 
-[![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CRAN
-status](https://www.r-pkg.org/badges/version/ggtime.png)](https://CRAN.R-project.org/package=ggtime)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![CRAN status](https://www.r-pkg.org/badges/version/ggtime)](https://CRAN.R-project.org/package=ggtime)
 [![R-CMD-check](https://github.com/mitchelloharawild/ggtime/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/mitchelloharawild/ggtime/actions/workflows/R-CMD-check.yaml)
+
 <!-- badges: end -->
 
 The ggtime package extends the capabilities of ‘ggplot2’ by providing
@@ -67,7 +66,7 @@ seasonality. A seasonal plot is created from a tsibble with the
 `gg_season()` plot helper function.
 
 ``` r
-tsibbledata::aus_production |> 
+tsibbledata::aus_production |>
   gg_season(Beer)
 ```
 
