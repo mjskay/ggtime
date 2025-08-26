@@ -15,8 +15,6 @@
 #'
 #' The `group` aesthetic determines which cases are connected together.
 #'
-#' @eval rd_orientation()
-#'
 #' @aesthetics GeomTimeLine
 #' @inheritParams ggplot2::layer
 #' @inheritParams ggplot2::geom_line
