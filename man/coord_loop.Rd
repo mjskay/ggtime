@@ -70,10 +70,11 @@ library(ggplot2)
 library(ggtime)
 
 # Basic usage with US accidental deaths data
-p <- tsibble::as_tsibble(USAccDeaths) |>
-  # Requires mixtime, POSIXct, or Date time types
-  dplyr::mutate(index = as.Date(index)) |>
-  ggplot(aes(x = index, y = value)) +
+uad <- tsibble::as_tsibble(USAccDeaths)
+# Requires mixtime, POSIXct, or Date time types
+uad$index <- as.Date(uad$index)
+
+p <- ggplot(uad, aes(x = index, y = value)) +
   geom_line()
 
 # Original plot
