@@ -24,7 +24,7 @@ coord_loop(
 \item A function that takes the limits as input and returns loop points as output
 }}
 
-\item{time_loops}{A \link[mixtime:duration]{mixtime::duration} giving the distance between temporal
+\item{time_loops}{A duration giving the distance between temporal
 loops like "2 weeks", or "10 years". If both \code{loops} and \code{time_loops} are
 specified, \code{time_loops} wins.}
 

@@ -8,7 +8,7 @@
 #'   - `NULL` or `waiver()` for no looping (the default)
 #'   - A `mixtime` vector giving time points at which the `time` axis should loop
 #'   - A function that takes the limits as input and returns loop points as output
-#' @param time_loops A [mixtime::duration] giving the distance between temporal
+#' @param time_loops A duration giving the distance between temporal
 #' loops like "2 weeks", or "10 years". If both `loops` and `time_loops` are
 #' specified, `time_loops` wins.
 #' @param time A string specifying which aesthetic contains the time variable that

@@ -37,7 +37,7 @@ omitted.}
 \item A function that takes the limits as input and returns breaks as output
 }}
 
-\item{time_breaks}{A \link[mixtime:duration]{mixtime::duration} giving the distance between breaks like
+\item{time_breaks}{A duration giving the distance between breaks like
 "2 weeks", or "10 years". If both \code{breaks} and \code{time_breaks} are specified,
 \code{time_breaks} wins.}
 
@@ -67,7 +67,7 @@ the time points.}
 output
 }}
 
-\item{time_minor_breaks}{A \link[mixtime:duration]{mixtime::duration} giving the distance between minor breaks like
+\item{time_minor_breaks}{A duration giving the distance between minor breaks like
 "2 weeks", or "10 years". If both \code{minor_breaks} and \code{time_minor_breaks} are
 specified, \code{time_minor_breaks} wins.}
 
@@ -82,7 +82,7 @@ use for mixed granularity. The default automatically selects it.}
 output
 }}
 
-\item{time_warps}{A \link[mixtime:duration]{mixtime::duration} giving the distance between temporal warping
+\item{time_warps}{A duration giving the distance between temporal warping
 like "2 weeks", or "10 years". If both \code{warps} and \code{time_warps} are
 specified, \code{time_warps} wins.}
 

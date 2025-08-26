@@ -5,10 +5,10 @@
 #' `scale_*_mixtime`.
 #'
 #' @inheritParams ggplot2::scale_x_date
-#' @param time_breaks A [mixtime::duration] giving the distance between breaks like
+#' @param time_breaks A duration giving the distance between breaks like
 #' "2 weeks", or "10 years". If both `breaks` and `time_breaks` are specified,
 #' `time_breaks` wins.
-#' @param time_minor_breaks A [mixtime::duration] giving the distance between minor breaks like
+#' @param time_minor_breaks A duration giving the distance between minor breaks like
 #' "2 weeks", or "10 years". If both `minor_breaks` and `time_minor_breaks` are
 #' specified, `time_minor_breaks` wins.
 #' @param common_time Acts like a vctrs `ptype` defining the common chronon to
@@ -20,7 +20,7 @@
 #'   - A `mixtime` vector giving positions of warping points
 #'   - A function that takes the limits as input and returns warping points as
 #'     output
-#' @param time_warps A [mixtime::duration] giving the distance between temporal warping
+#' @param time_warps A duration giving the distance between temporal warping
 #' like "2 weeks", or "10 years". If both `warps` and `time_warps` are
 #' specified, `time_warps` wins.
 #'
