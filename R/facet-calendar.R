@@ -25,8 +25,10 @@
 #' @export
 #' @examples
 #' \donttest{
-#' fs <- tsibble::pedestrian %>%
-#'   dplyr::filter(Date < as.Date("2015-05-01"))
+#' fs <- dplyr::filter(
+#'   tsibble::pedestrian,
+#'   Date < as.Date("2015-05-01")
+#' )
 #'
 #' fs |>
 #'   ggplot(aes(x = Time, y = Count)) +
