@@ -1,3 +1,43 @@
+#' Connect time observations with offset handling
+#'
+#' @description
+#' `geom_time_line()` connects observations in order of the time variable, similar to
+#' [ggplot2::geom_line()], but with special handling for time gaps and changes in time offsets.
+#'
+#' The geometry helps to visualise time with changing time offsets provided by the
+#' `[x/y]timeoffset` aesthetics. Changes in time offsets are drawn using dashed lines,
+#' which are most commonly used for timezone changes and daylight savings time transitions.
+#' Timezone offsets are automatically used when times from the `mixtime` package are used
+#' in conjunction with `position_time_civil()` positioning (the default).
+#'
+#' This geometry also respects implicit missing values in regular time series, and will
+#' not connect temporal observations separated by gaps.
+#'
+#' The `group` aesthetic determines which cases are connected together.
+#'
+#' @eval rd_orientation()
+#'
+#' @aesthetics GeomTimeLine
+#' @inheritParams ggplot2::layer
+#' @inheritParams ggplot2::geom_line
+#' @param ... Other arguments passed on to [ggplot2::geom_line()].
+#'
+#' @seealso
+#'  [position_time_civil()]/[position_time_absolute()] for civil and absolute time positioning.
+#'
+#'  [ggplot2::geom_line()]/[ggplot2::geom_path()] for standard line/path geoms in ggplot2.
+#' @section Missing value handling:
+#' `geom_time_line()` handles missing values similar to [ggplot2::geom_line()], but with
+#' additional logic for implicit missing values in time series. Implicit missing
+#' values (gaps in regular time intervals) are not connected, creating breaks in
+#' the line without warnings.
+#'
+#' @section Changing time offsets:
+#' The `xtimeoffset` and `ytimeoffset` aesthetics allow for visualization of time
+#' offset changes, such as timezone transitions or daylight saving time changes.
+#' When successive time offsets differ, a dashed line segment is drawn to show
+#' the offset transition.
+#'
 #' @export
 geom_time_line <- function(
   mapping = NULL,
@@ -26,13 +66,11 @@ geom_time_line <- function(
   )
 }
 
-#' @format NULL
-#' @usage NULL
-#' @export
+#' @keywords internal
 GeomTimeLine <- ggproto(
   "GeomTimeLine",
   GeomPath,
-  optional_aes = c("xoffset", "yoffset"),
+  optional_aes = c("xtimeoffset", "ytimeoffset"),
   draw_panel = function(
     self,
     data,
@@ -46,21 +84,21 @@ GeomTimeLine <- ggproto(
     na.rm = FALSE
   ) {
     # TODO
-    # * Add timezone dashed lines for y-axis offsets
+    # * Add dashed lines for y-axis offsets
     # * Add gaps for implicit missing values
     # * Use linear interpolation to calculate trend values at the timezone changes
 
     # If the data is regular across a timezone change (offset) then draw a dashed line
     # Otherwise, there is a gap and there is no dashed timezone line
 
-    tz_jumps <- c(FALSE, data$xoffset[-1] != data$xoffset[-nrow(data)])
+    tz_jumps <- c(FALSE, data$xtimeoffset[-1] != data$xtimeoffset[-nrow(data)])
     tz_jumps_i <- which(tz_jumps)
 
-    # TODO: Bug doesn't work with multiple tz_jumps
+    # TODO: Bug doesn't work with multiple offset changes
     data <- data[rep(seq_len(nrow(data)), 1L + tz_jumps), ]
     tz_jump_dest <- seq_along(tz_jumps_i) + tz_jumps_i - 1
     data$x[tz_jump_dest] <- data$x[tz_jump_dest] +
-      diff(data$xoffset[tz_jump_dest - (0:1)])
+      diff(data$xtimeoffset[tz_jump_dest - (0:1)])
     data$linetype[tz_jump_dest] <- 2L
 
     if (!anyDuplicated(data$group)) {
