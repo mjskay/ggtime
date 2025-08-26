@@ -16,17 +16,64 @@ coord_loop(
   coord = coord_cartesian()
 )
 }
+\arguments{
+\item{loop}{A vector of cutpoints where the data should be looped, or \code{waiver()}
+to automatically determine cutpoints based on \code{time_loop}.}
+
+\item{time_loop}{A time duration (e.g., "year", "month", "day") specifying
+the period over which to loop the data. Used when \code{loop} is \code{waiver()}.}
+
+\item{time}{A string specifying which aesthetic contains the time variable that
+should be looped over. Default is \code{"x"}.}
+
+\item{xlim, ylim}{Limits for the x and y axes. \code{NULL} means use the default limits.}
+
+\item{expand}{Logical indicating whether to expand the coordinate limits.
+Default is \code{FALSE}.}
+
+\item{default}{Logical indicating whether this is the default coordinate system.
+Default is \code{FALSE}.}
+
+\item{clip}{Should drawing be clipped to the extent of the plot panel?
+A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
+
+\item{coord}{The underlying coordinate system to use. Default is \code{coord_cartesian()}.}
+}
+\value{
+A \code{Coord} ggproto object that can be added to a ggplot.
+}
 \description{
-Looped coordinates
+Create a coordinate system that loops time series data over specified periods,
+allowing visualization of seasonal patterns by superimposing multiple time periods
+on top of each other.
+}
+\details{
+This coordinate system is particularly useful for visualizing seasonal or
+cyclic patterns in time series data. It works by:
+\enumerate{
+\item Dividing the time axis into segments based on the specified loop period
+\item Translating each segment to overlay on the first segment
+\item Creating a visualization where multiple time periods are superimposed
+}
+
+The coordinate system requires R version 4.2.0 or higher due to its use of
+clipping paths.
 }
 \examples{
-
 library(ggplot2)
+library(ggtime)
+
+# Basic usage with US accidental deaths data
 p <- as_tsibble(USAccDeaths) |>
+  # Requires mixtime, POSIXct, or Date time types
+  mutate(index = as.Date(index)) |>
   ggplot(aes(x = index, y = value)) +
   geom_line()
 
+# Original plot
 p
-p + coord_loop(period = "year")
+
+# With yearly looping to show seasonal patterns
+p + coord_loop(time_loop = "year")
 
 }
