@@ -20,6 +20,9 @@
 #' @aesthetics GeomTimeLine
 #' @inheritParams ggplot2::layer
 #' @inheritParams ggplot2::geom_line
+#' @param inherit.aes If `FALSE`, overrides the default aesthetics, rather than
+#'  combining with them. This is most useful for helper functions that define both
+#'  data and aesthetics and shouldn't inherit behaviour from the default plot specification.
 #' @param ... Other arguments passed on to [ggplot2::geom_line()].
 #'
 #' @seealso
