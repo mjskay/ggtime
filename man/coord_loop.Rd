@@ -10,7 +10,7 @@ coord_loop(
   time = "x",
   xlim = NULL,
   ylim = NULL,
-  expand = TRUE,
+  expand = FALSE,
   default = FALSE,
   clip = "on",
   coord = coord_cartesian()

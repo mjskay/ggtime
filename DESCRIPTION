@@ -58,7 +58,6 @@ Imports:
     lifecycle,
     rlang,
     scales,
-    timechange,
     tsibble,
     fabletools,
     dplyr,

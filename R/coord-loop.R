@@ -119,7 +119,7 @@ CoordLoop <- function(coord) {
       })
       panel_grob <- inject(grobTree(!!!panel))
       translated_panels <- lapply(
-        head(cuts, -1),
+        cuts[-length(cuts)],
         function(x) {
           grobTree(
             panel_grob,
