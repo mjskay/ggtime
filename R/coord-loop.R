@@ -113,7 +113,7 @@ CoordLoop <- function(coord) {
       )
 
       # Determine the cutpoints where we will loop
-      if (ggplot2::is_waiver(self$loops)) {
+      if (is_waiver(self$loops)) {
         self$loops <- cut_axis_time(uncut_params, self$time, self$time_loops)
       }
 
