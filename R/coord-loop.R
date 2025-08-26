@@ -42,7 +42,7 @@
 #' library(ggtime)
 #'
 #' # Basic usage with US accidental deaths data
-#' p <- as_tsibble(USAccDeaths) |>
+#' p <- tsibble::as_tsibble(USAccDeaths) |>
 #'   # Requires mixtime, POSIXct, or Date time types
 #'   dplyr::mutate(index = as.Date(index)) |>
 #'   ggplot(aes(x = index, y = value)) +

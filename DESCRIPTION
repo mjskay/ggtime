@@ -68,4 +68,6 @@ Imports:
     gtable,
     scales,
     vctrs,
-    R6
+    cli,
+    mixtime,
+    vecvec

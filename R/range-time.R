@@ -1,4 +1,4 @@
-#' @export
+#' @keywords internal
 #' @importFrom scales ContinuousRange
 MixtimeRange <- R6::R6Class(
   "MixtimeRange",
@@ -11,7 +11,7 @@ MixtimeRange <- R6::R6Class(
   )
 )
 
-#' @export
+#' @keywords internal
 train_mixtime <- function(new, existing = NULL, call = caller_env()) {
   if (is.null(new)) {
     return(existing)
