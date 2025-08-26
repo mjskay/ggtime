@@ -245,10 +245,10 @@ ScaleContinuousMixtime <- ggproto(
     # TODO: Check functionality of self$oob
     # self$oob(x, limits)
 
-    if (mixtime::is_mixtime(x)) {
-      x <- as.numeric(vecvec::unvecvec(x))
+    if (inherits(x, "mixtime")) {
+      x <- vecvec::unvecvec(x)
     }
-    x
+    as.numeric(x)
   },
   break_info = function(self, range = NULL) {
     breaks <- ggproto_parent(ScaleContinuous, self)$break_info(range)
@@ -338,7 +338,7 @@ gmt_offset <- function(x) {
   )
 }
 tz_offset <- function(x) {
-  if (!mixtime::is_mixtime(x)) {
+  if (!inherits(x, "mixtime")) {
     cli::cli_warn(
       "Missing timezone offset could not be calculated in the scale."
     )
