@@ -7,5 +7,6 @@
 #' @import ggplot2
 #' @import grid
 #' @import rlang
+#' @importFrom vctrs %0%
 ## usethis namespace: end
 NULL
