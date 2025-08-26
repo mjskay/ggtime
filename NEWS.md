@@ -1,3 +1,5 @@
+# ggtime (development version)
+
 # ggtime 0.1.0
 
 Initial release including all plot helper functions from across the tidy time
