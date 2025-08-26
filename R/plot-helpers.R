@@ -425,7 +425,7 @@ gg_season <- function(
 
   if (labels != "none") {
     labeller <- if (labels_repel) {
-      require_package("ggrepel")
+      rlang::check_installed("ggrepel")
       function(...) {
         ggrepel::geom_text_repel(..., direction = "y", segment.colour = NA)
       }
@@ -725,8 +725,8 @@ gg_tsdisplay <- function(
       "The data provided to contains more than one time series. Please filter a single time series to use `gg_tsdisplay()`"
     )
   }
-  require_package("grid")
-  require_package("feasts")
+  rlang::check_installed("grid")
+  rlang::check_installed("feasts")
 
   y <- guess_plot_var(data, !!enquo(y))
 
@@ -1025,10 +1025,10 @@ gg_irf <- function(data, y = all_of(measured_vars(data))) {
 #' @export
 autoplot.tbl_cf <- function(object, level = 95, ...) {
   cf_type <- colnames(object)[colnames(object) %in% c("acf", "pacf", "ccf")]
-  plot_aes <- eval_tidy(expr(ggplot2::aes(
+  plot_aes <- ggplot2::aes(
     x = !!sym("lag"),
     y = !!sym(cf_type)
-  )))
+  )
   interval <- interval(object)
 
   if (length(level) > 1) {
@@ -1043,7 +1043,7 @@ autoplot.tbl_cf <- function(object, level = 95, ...) {
     envir = getNamespace("tsibble")
   )
   p <- ggplot(object, plot_aes) +
-    geom_linecol() +
+    geom_segment(aes(xend = !!sym("lag"), yend = 0)) +
     geom_hline(yintercept = 0) +
     xlab(paste0("lag [", itvl_fmt(interval), "]"))
 
@@ -1098,7 +1098,7 @@ scale_x_cf_lag <- function(...) {
       if (!is.null(gap <- attr(x, "interval"))) {
         self$interval <- gap
         freq <- get_frequencies(NULL, gap, .auto = "all")
-        self$frequency <- min(freq[freq > 3] %empty% NA)
+        self$frequency <- min(freq[freq > 3] %0% NA)
       }
     },
     get_breaks = function(self, limits = self$get_limits()) {
