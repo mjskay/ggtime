@@ -25,13 +25,13 @@
 #' @export
 #' @examples
 #' \donttest{
+#' library(ggplot2)
 #' fs <- dplyr::filter(
 #'   tsibble::pedestrian,
 #'   Date < as.Date("2015-05-01")
 #' )
 #'
-#' fs |>
-#'   ggplot(aes(x = Time, y = Count)) +
+#' ggplot(fs, aes(x = Time, y = Count)) +
 #'   geom_line(aes(colour = Sensor)) +
 #'   facet_calendar(vars(Date), nrow = 2) +
 #'   theme(legend.position = "bottom")
