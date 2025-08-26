@@ -60,7 +60,7 @@ autoplot.dcmp_ts <- function(
     interval_data <- as_tibble(object)
     interval_data[paste0(level, "%")] <- lapply(
       level,
-      ggdist::hilo,
+      distributional::hilo,
       x = interval_data[[".val"]]
     )
     interval_data <- tidyr::pivot_longer(
