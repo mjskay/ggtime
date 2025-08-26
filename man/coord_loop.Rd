@@ -5,8 +5,8 @@
 \title{Looped coordinates}
 \usage{
 coord_loop(
-  loop = waiver(),
-  time_loop = waiver(),
+  loops = waiver(),
+  time_loops = waiver(),
   time = "x",
   xlim = NULL,
   ylim = NULL,
@@ -17,11 +17,16 @@ coord_loop(
 )
 }
 \arguments{
-\item{loop}{A vector of cutpoints where the data should be looped, or \code{waiver()}
-to automatically determine cutpoints based on \code{time_loop}.}
+\item{loops}{Loop the time scale around a calendrical granularity, one of:
+\itemize{
+\item \code{NULL} or \code{waiver()} for no looping (the default)
+\item A \code{mixtime} vector giving time points at which the \code{time} axis should loop
+\item A function that takes the limits as input and returns loop points as output
+}}
 
-\item{time_loop}{A time duration (e.g., "year", "month", "day") specifying
-the period over which to loop the data. Used when \code{loop} is \code{waiver()}.}
+\item{time_loops}{A \link[mixtime:duration]{mixtime::duration} giving the distance between temporal
+loops like "2 weeks", or "10 years". If both \code{loops} and \code{time_loops} are
+specified, \code{time_loops} wins.}
 
 \item{time}{A string specifying which aesthetic contains the time variable that
 should be looped over. Default is \code{"x"}.}
@@ -50,6 +55,7 @@ on top of each other.
 \details{
 This coordinate system is particularly useful for visualizing seasonal or
 cyclic patterns in time series data. It works by:
+
 \enumerate{
 \item Dividing the time axis into segments based on the specified loop period
 \item Translating each segment to overlay on the first segment
@@ -66,7 +72,7 @@ library(ggtime)
 # Basic usage with US accidental deaths data
 p <- as_tsibble(USAccDeaths) |>
   # Requires mixtime, POSIXct, or Date time types
-  mutate(index = as.Date(index)) |>
+  dplyr::mutate(index = as.Date(index)) |>
   ggplot(aes(x = index, y = value)) +
   geom_line()
 

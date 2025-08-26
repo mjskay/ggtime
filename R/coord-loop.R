@@ -4,10 +4,13 @@
 #' allowing visualization of seasonal patterns by superimposing multiple time periods
 #' on top of each other.
 #'
-#' @param loop A vector of cutpoints where the data should be looped, or `waiver()`
-#'   to automatically determine cutpoints based on `time_loop`.
-#' @param time_loop A time duration (e.g., "year", "month", "day") specifying
-#'   the period over which to loop the data. Used when `loop` is `waiver()`.
+#' @param loops Loop the time scale around a calendrical granularity, one of:
+#'   - `NULL` or `waiver()` for no looping (the default)
+#'   - A `mixtime` vector giving time points at which the `time` axis should loop
+#'   - A function that takes the limits as input and returns loop points as output
+#' @param time_loops A [mixtime::duration] giving the distance between temporal
+#' loops like "2 weeks", or "10 years". If both `loops` and `time_loops` are
+#' specified, `time_loops` wins.
 #' @param time A string specifying which aesthetic contains the time variable that
 #'   should be looped over. Default is `"x"`.
 #' @param xlim,ylim Limits for the x and y axes. `NULL` means use the default limits.
@@ -22,6 +25,7 @@
 #' @details
 #' This coordinate system is particularly useful for visualizing seasonal or
 #' cyclic patterns in time series data. It works by:
+#'
 #' \enumerate{
 #'   \item Dividing the time axis into segments based on the specified loop period
 #'   \item Translating each segment to overlay on the first segment
@@ -40,7 +44,7 @@
 #' # Basic usage with US accidental deaths data
 #' p <- as_tsibble(USAccDeaths) |>
 #'   # Requires mixtime, POSIXct, or Date time types
-#'   mutate(index = as.Date(index)) |>
+#'   dplyr::mutate(index = as.Date(index)) |>
 #'   ggplot(aes(x = index, y = value)) +
 #'   geom_line()
 #'
@@ -52,8 +56,8 @@
 #'
 #' @export
 coord_loop <- function(
-  loop = waiver(),
-  time_loop = waiver(),
+  loops = waiver(),
+  time_loops = waiver(),
   time = "x",
   xlim = NULL,
   ylim = NULL,
@@ -65,8 +69,8 @@ coord_loop <- function(
   ggplot2::ggproto(
     NULL,
     CoordLoop(coord),
-    loop = loop,
-    time_loop = time_loop,
+    loops = loops,
+    time_loops = time_loops,
     time = time,
     limits = list(x = xlim, y = ylim),
     expand = expand,
@@ -76,9 +80,7 @@ coord_loop <- function(
 }
 
 #' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
-#' @export
+#' @keywords internal
 CoordLoop <- function(coord) {
   force(coord)
   ggplot2::ggproto(
@@ -111,8 +113,8 @@ CoordLoop <- function(coord) {
       )
 
       # Determine the cutpoints where we will loop
-      if (ggplot2::is_waiver(self$loop)) {
-        self$loop <- cut_axis_time(uncut_params, self$time, self$time_loop)
+      if (ggplot2::is_waiver(self$loops)) {
+        self$loops <- cut_axis_time(uncut_params, self$time, self$time_loops)
       }
 
       # @mjskay TODO - add loop justification 'ljust = <0-1>'
@@ -124,16 +126,16 @@ CoordLoop <- function(coord) {
       # (comment out this line to disable zooming for debugging)
       self$limits[[self$time]] <- c(
         # Restart at the first time point
-        self$loop[1],
+        self$loops[1],
         # End at the longest time point in the loop
-        self$loop[1] + max(diff(self$loop))
+        self$loops[1] + max(diff(self$loops))
       )
       cut_params <- ggproto_parent(coord, self)$setup_panel_params(
         scale_x,
         scale_y,
         params
       )
-      cut_params$time_cuts <- self$loop
+      cut_params$time_cuts <- self$loops
       cut_params
     },
 
