@@ -13,6 +13,9 @@
 #' specified, `time_loops` wins.
 #' @param time A string specifying which aesthetic contains the time variable that
 #'   should be looped over. Default is `"x"`.
+#' @param ljust Loop justification, a number between 0 and 1
+#'   indicating where the lines between looped positions are drawn
+#'   (0 indicates left, 1 indicates right, 0.5 indicates center).
 #' @param xlim,ylim Limits for the x and y axes. `NULL` means use the default limits.
 #' @param expand Logical indicating whether to expand the coordinate limits.
 #'   Default is `FALSE`.
@@ -33,7 +36,7 @@
 #' }
 #'
 #' The coordinate system requires R version 4.2.0 or higher due to its use of
-#' clipping paths.
+#' usage of clipping paths.
 #'
 #' @return A `Coord` ggproto object that can be added to a ggplot.
 #'
@@ -53,13 +56,14 @@
 #' p
 #'
 #' # With yearly looping to show seasonal patterns
-#' p + coord_loop(time_loop = "year")
+#' p + coord_loop(time_loop = "1 year")
 #'
 #' @export
 coord_loop <- function(
   loops = waiver(),
   time_loops = waiver(),
   time = "x",
+  ljust = 0.5,
   xlim = NULL,
   ylim = NULL,
   expand = FALSE,
@@ -73,6 +77,7 @@ coord_loop <- function(
     loops = loops,
     time_loops = time_loops,
     time = time,
+    ljust = ljust,
     limits = list(x = xlim, y = ylim),
     expand = expand,
     default = default,
@@ -120,7 +125,7 @@ CoordLoop <- function(coord) {
 
       # @mjskay TODO - add loop justification 'ljust = <0-1>'
       # Name at your discretion, essentially needs to adjust the limits and geom cuts/clips (rectangles)
-      # self$loop <- self$loop - ljust
+      self$loop <- self$loop - self$ljust
 
       # Recalculate the panel parameters zoomed in on the first region.
       # Doing it this way should apply expand settings, etc, again.

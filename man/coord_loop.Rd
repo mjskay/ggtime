@@ -8,6 +8,7 @@ coord_loop(
   loops = waiver(),
   time_loops = waiver(),
   time = "x",
+  ljust = 0.5,
   xlim = NULL,
   ylim = NULL,
   expand = FALSE,
@@ -30,6 +31,10 @@ specified, \code{time_loops} wins.}
 
 \item{time}{A string specifying which aesthetic contains the time variable that
 should be looped over. Default is \code{"x"}.}
+
+\item{ljust}{Loop justification, a number between 0 and 1
+indicating where the lines between looped positions are drawn
+(0 indicates left, 1 indicates right, 0.5 indicates center).}
 
 \item{xlim, ylim}{Limits for the x and y axes. \code{NULL} means use the default limits.}
 
@@ -63,7 +68,7 @@ cyclic patterns in time series data. It works by:
 }
 
 The coordinate system requires R version 4.2.0 or higher due to its use of
-clipping paths.
+usage of clipping paths.
 }
 \examples{
 library(ggplot2)
@@ -81,6 +86,6 @@ p <- ggplot(uad, aes(x = index, y = value)) +
 p
 
 # With yearly looping to show seasonal patterns
-p + coord_loop(time_loop = "year")
+p + coord_loop(time_loop = "1 year")
 
 }
