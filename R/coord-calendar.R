@@ -3,6 +3,9 @@
 #' Create a coordinate system that wraps time series data over specified periods.
 #'
 #' @inheritParams coord_loop
+#'
+#' @importFrom gtable gtable_col gtable_row
+#'
 #' @export
 coord_calendar <- function(
   loops = waiver(),
@@ -71,31 +74,41 @@ CoordCalendar <- function(coord) {
     },
 
     render_axis_v = function(self, panel_params, theme) {
-      axis_grobs <- ggproto_parent(coord, self)$render_axis_v(panel_params, theme)
+      axis_grobs <- ggproto_parent(coord, self)$render_axis_v(
+        panel_params,
+        theme
+      )
       if (!panel_params$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
-        height <- 1/panel_params$n_row
-        axis_grobs <- lapply(axis_grobs, function(grob) gtable_col(
-          "y_axis",
-          replicate(panel_params$n_row, grob, simplify = FALSE),
-          width = grobWidth(grob),
-          heights = unit(rep(height, panel_params$n_row), "npc")
-        ))
+        height <- 1 / panel_params$n_row
+        axis_grobs <- lapply(axis_grobs, function(grob) {
+          gtable_col(
+            "y_axis",
+            replicate(panel_params$n_row, grob, simplify = FALSE),
+            width = grobWidth(grob),
+            heights = unit(rep(height, panel_params$n_row), "npc")
+          )
+        })
       }
       axis_grobs
     },
 
     render_axis_h = function(self, panel_params, theme) {
-      axis_grobs <- ggproto_parent(coord, self)$render_axis_h(panel_params, theme)
+      axis_grobs <- ggproto_parent(coord, self)$render_axis_h(
+        panel_params,
+        theme
+      )
       if (panel_params$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
-        width <- 1/panel_params$n_row
-        axis_grobs <- lapply(axis_grobs, function(grob) gtable_row(
-          "x_axis",
-          replicate(panel_params$n_row, grob, simplify = FALSE),
-          height = grobHeight(grob),
-          widths = unit(rep(width, panel_params$n_row), "npc")
-        ))
+        width <- 1 / panel_params$n_row
+        axis_grobs <- lapply(axis_grobs, function(grob) {
+          gtable_row(
+            "x_axis",
+            replicate(panel_params$n_row, grob, simplify = FALSE),
+            height = grobHeight(grob),
+            widths = unit(rep(width, panel_params$n_row), "npc")
+          )
+        })
       }
       axis_grobs
     }
@@ -106,17 +119,25 @@ CoordCalendar <- function(coord) {
 #' @param grob a grob
 #' @param n_row number of rows
 #' @param is_flipped if `TRUE`, repeat in columns
+#' @noRd
 repeat_grob_in_rows <- function(grob, n_row, is_flipped) {
   # TODO: should be able to factor out a common implementation between this,
   # render_axis_h, and render_axis_v (gtable was being finicky for me about z
   # orders so I left this for now)
-  height <- 1/n_row
+  height <- 1 / n_row
   .viewport <- flip_grid_fun(viewport, is_flipped)
-  ys <- 1 - seq_len(n_row)/n_row
+  ys <- 1 - seq_len(n_row) / n_row
   height <- unit(1 / n_row, "npc")
   grobs <- lapply(ys, function(y) {
-    grobTree(grob, vp = .viewport(x = unit(0, "npc"), y = unit(y, "npc"), just = c(0, 0), height = height))
+    grobTree(
+      grob,
+      vp = .viewport(
+        x = unit(0, "npc"),
+        y = unit(y, "npc"),
+        just = c(0, 0),
+        height = height
+      )
+    )
   })
   inject(grobTree(!!!grobs))
 }
-
