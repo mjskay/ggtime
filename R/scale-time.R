@@ -1,8 +1,41 @@
 #' Position scales for mixtime data
 #'
-#' These are the default scales for mixtime vectors, which are usually used for
-#' a plot automatically. To override the scales behaviour manually, use
+#' These are the default scales for mixtime vectors, responsible for mapping
+#' time points to aesthetics along with identifying break points and labels for
+#' the axes and guides. To override the scales behaviour manually, use
 #' `scale_*_mixtime`.
+#'
+#' Additional to the standard ggplot2 continuous scale options, these scales
+#' provide time specific options including:
+#'
+#' **Granularity alignment**
+#'
+#' Visualising mixed granularity time data introduces indeterminacy in the
+#' mapping of less precise time points onto a common time scale. For example,
+#' plotting monthly and daily data together raises the question of where to
+#' place the monthly points relative to the daily points. By default, mixtime
+#' uses center alignment, mapping the monthly points to the middle of the
+#' month. This is controlled using the `time_align` argument, which accepts a
+#' value between 0 (start alignment) and 1 (end alignment) and defaults to 0.5.
+#'
+#' The common time scale that defines how all granularities are mapped is
+#' automatically identified based on the input data. This is achieved by finding
+#' the finest chronon that all time points can be represented in. For example,
+#' if the data contains both monthly and daily time points, the common time scale
+#' will be daily, with the monthly points aligned according to the `time_align`
+#' argument. If multiple time zones are present, the common time zone will
+#' default to UTC. The common time scale can be manually specified using the
+#' `common_time` argument, which accepts a `mixtime::time_unit`.
+#'
+#' **Temporal warping**
+#'
+#' Time scales can be warped to have a consistent length between specified time
+#' points. This is useful when visually exploring cyclical patterns where each
+#' cycle has varying length. By warping the time scale, the shape of each cycle
+#' can be more easily compared. Temporal warping is controlled using the `warps`
+#' argument, which accepts a `mixtime` vector defining the positions of the
+#' warping points. Calendar-based warping points can be conveniently specified
+#' using the `time_warps` argument, which accepts a duration like "1 month".
 #'
 #' @inheritParams ggplot2::scale_x_date
 #' @param time_breaks A duration giving the distance between breaks like
