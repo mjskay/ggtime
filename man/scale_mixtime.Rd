@@ -41,9 +41,7 @@ omitted.}
 "2 weeks", or "10 years". If both \code{breaks} and \code{time_breaks} are specified,
 \code{time_breaks} wins.}
 
-\item{labels}{One of the options below. Please note that when \code{labels} is a
-vector, it is highly recommended to also set the \code{breaks} argument as a
-vector to protect against unintended mismatches.
+\item{labels}{One of:
 \itemize{
 \item \code{NULL} for no labels
 \item \code{waiver()} for the default labels computed by the
