@@ -23,6 +23,9 @@
 #'   Default is `FALSE`.
 #' @param clip Should drawing be clipped to the extent of the plot panel?
 #'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
+#' @param clip_loops Should the drawing of each loop of the timescale be clipped to
+#'   the breaks defined by `time_loops` and `ljust`?
+#'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
 #' @param coord The underlying coordinate system to use. Default is `coord_cartesian()`.
 #'
 #' @details
@@ -69,6 +72,7 @@ coord_loop <- function(
   expand = FALSE,
   default = FALSE,
   clip = "on",
+  clip_loops = "on",
   coord = coord_cartesian()
 ) {
   ggplot2::ggproto(
@@ -81,7 +85,8 @@ coord_loop <- function(
     limits = list(x = xlim, y = ylim),
     expand = expand,
     default = default,
-    clip = clip
+    clip = clip,
+    clip_loops = clip_loops
   )
 }
 
@@ -120,12 +125,11 @@ CoordLoop <- function(coord) {
 
       # Determine the cutpoints where we will loop
       if (is_waiver(self$loops)) {
-        self$loops <- cut_axis_time(uncut_params, self$time, self$time_loops)
+        self$loops <- cut_axis_time(uncut_params, self$time, self$time_loops, self$ljust)
+      } else {
+        self$loops <- sort(unique(self$loops))
+        self$loops <- c(self$loops - self$ljust, self$loops[length(self$loops)] + (1 - self$ljust))
       }
-
-      # @mjskay TODO - add loop justification 'ljust = <0-1>'
-      # Name at your discretion, essentially needs to adjust the limits and geom cuts/clips (rectangles)
-      self$loop <- self$loop - self$ljust
 
       # Recalculate the panel parameters zoomed in on the first region.
       # Doing it this way should apply expand settings, etc, again.
@@ -146,13 +150,17 @@ CoordLoop <- function(coord) {
     },
 
     draw_panel = function(self, panel, params, theme) {
-      if (!ggplot2::check_device("clippingPaths")) {
+      is_clipped = isTRUE(self$clip_loops %in% c("on", TRUE))  # could have stricter validation
+      is_flipped = isTRUE(self$time == "y")
+      if (is_clipped && !ggplot2::check_device("clippingPaths")) {
         stop("Looped coordinates requires R v4.2.0 or higher.")
       }
 
       # Get cutpoints along the axis for dividing the panel grob into regions
       cuts <- params[[self$time]]$rescale(params$time_cuts)
       origin <- cuts[[1]]
+      xs <- cuts[-length(cuts)]
+      widths <- diff(cuts)
 
       # Translate and superimpose the panel grob on itself repeatedly.
       # I attempted to use defineGrob() + useGrob() here to improve efficiency
@@ -162,29 +170,34 @@ CoordLoop <- function(coord) {
       # have been drawn into given where it is in the grob tree, which meant
       # it was always getting clipped. So I stuck to just repeatedly re-drawing
       # the same grob.
-      .viewport = switch(self$time, x = viewport, y = function(x, y, ...) {
-        viewport(y = x, x = y, ...)
-      })
+      .viewport <- flip_grid_fun(viewport, is_flipped)
+      .rectGrob <- flip_grid_fun(rectGrob, is_flipped)
       panel_grob <- inject(grobTree(!!!panel))
-      translated_panels <- lapply(
-        cuts[-length(cuts)],
-        function(x) {
+      translated_panels <- .mapply(
+        function(x, width) {
           grobTree(
             panel_grob,
             vp = .viewport(
               unit(origin - x, "npc"),
               unit(0, "npc"),
-              just = c(0, 0)
-              # Could clip here (as below) but that will clip inside the space
-              # added by `expand = `, so probably better not to
-              # clip = rectGrob(unit(x, "npc"), just = 0, width = unit(1, "npc"))
+              just = c(0, 0),
+              clip = if (is_clipped) {
+                .rectGrob(
+                  unit(x, "npc"), y = unit(0, "npc"),
+                  width = unit(width, "npc"), height = unit(1, "npc"),
+                  just = c(0,0)
+                )
+              } else {
+                "inherit"
+              }
             )
           )
-        }
+        },
+        list(xs, widths),
+        NULL
       )
 
       # # Uncomment for debug info --- region boundaries and centers
-      # widths <- diff(cuts)
       # centers <- rowMeans(embed(cuts, 2))
       # translated_panels <- c(
       #   translated_panels,
@@ -199,20 +212,36 @@ CoordLoop <- function(coord) {
   )
 }
 
+#' Flip the x and y axes of a grid function
+#' @param f a \pkg{grid} function, like [viewport()] or [rectGrob()].
+#' @param is_flipped should it be flipped?
+#' @returns function with the same parameters as `f` but with positional axis
+#' arguments (`x`, `y`, `width`, `height`, ...) swapped.
+#' @noRd
+flip_grid_fun <- function(f, is_flipped) {
+  if (!is_flipped) return(f)
+  new_f <- function(x, y, width, height, just, hjust, vjust, ...) {
+    f(x = y, y = x, width = height, height = width, just = rev(just), hjust = vjust, vjust = hjust, ...)
+  }
+  formals(new_f)[c("x", "y", "width", "height", "hjust", "vjust")] <-
+    formals(f)[c("y", "x", "height", "width", "vjust", "hjust")]
+  new_f
+}
 
 #' Get time cutpoints along a positional axis
 #' @param params Panel params, e.g. as returned by `Coord$setup_panel_params()`
 #' and passed to `Coord$draw_panel(params = ...)`
 #' @param axis Axis to cut (`"x"` or `"y"`).
 #' @param by Duration to cut by
+#' @param ljust Loop justification, a number between 0 and 1
 #' @returns vector of time cutpoints
 #' @noRd
-cut_axis_time <- function(params, axis, by) {
+cut_axis_time <- function(params, axis, by, ljust) {
   trans <- params[[axis]]$get_transformation()
   range <- params[[axis]]$limits
   time_range <- trans$inverse(range)
   time_cuts <- unique(c(
-    seq(time_range[1], time_range[2], by = by),
+    seq(time_range[1] - ljust, time_range[2] + (1 - ljust), by = by),
     time_range[2]
   ))
   time_cuts
