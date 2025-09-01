@@ -98,18 +98,6 @@ CoordLoop <- function(coord) {
     "CoordLoop",
     coord,
 
-    setup_layout = function(layout, params) {
-      coord$setup_layout(layout, params)
-    },
-
-    setup_data = function(data, params) {
-      coord$setup_data(data, params)
-    },
-
-    setup_params = function(self, data) {
-      ggproto_parent(coord, self)$setup_params(data)
-    },
-
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
       # We need to adjust the panel parameters so that the scale is zoomed in
       # on the first region (which we will translate all other regions onto in draw_panel).
@@ -158,58 +146,75 @@ CoordLoop <- function(coord) {
 
       # Get cutpoints along the axis for dividing the panel grob into regions
       cuts <- params[[self$time]]$rescale(params$time_cuts)
-      origin <- cuts[[1]]
-      xs <- cuts[-length(cuts)]
-      widths <- diff(cuts)
 
-      # Translate and superimpose the panel grob on itself repeatedly.
-      # I attempted to use defineGrob() + useGrob() here to improve efficiency
-      # (since theoretically it allows efficient repitition of a single grob
-      # drawn off-screen), I couldn't figure out how to make the grob defined
-      # by defineGrob() not be clipped by the first region it would theoretically
-      # have been drawn into given where it is in the grob tree, which meant
-      # it was always getting clipped. So I stuck to just repeatedly re-drawing
-      # the same grob.
-      .viewport <- flip_grid_fun(viewport, is_flipped)
-      .rectGrob <- flip_grid_fun(rectGrob, is_flipped)
-      panel_grob <- inject(grobTree(!!!panel))
-      translated_panels <- .mapply(
-        function(x, width) {
-          grobTree(
-            panel_grob,
-            vp = .viewport(
-              unit(origin - x, "npc"),
-              unit(0, "npc"),
-              just = c(0, 0),
-              clip = if (is_clipped) {
-                .rectGrob(
-                  unit(x, "npc"), y = unit(0, "npc"),
-                  width = unit(width, "npc"), height = unit(1, "npc"),
-                  just = c(0,0)
-                )
-              } else {
-                "inherit"
-              }
-            )
-          )
-        },
-        list(xs, widths),
-        NULL
-      )
-
-      # # Uncomment for debug info --- region boundaries and centers
-      # centers <- rowMeans(embed(cuts, 2))
-      # translated_panels <- c(
-      #   translated_panels,
-      #   list(
-      #     rectGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), width = unit(widths, "npc"), gp = gpar(col = "red", fill = NA)),
-      #     pointsGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), gp = gpar(col = "red"))
-      #   )
-      # )
+      translated_panels <- translate_and_superimpose_grobs(panel, cuts, 1L, is_flipped, is_clipped)
 
       ggproto_parent(coord, self)$draw_panel(translated_panels, params, theme)
     }
   )
+}
+
+#' Translate and superimpose grobs at specified cutpoints along x (or y) axis
+#' @param grobs list of grobs
+#' @param cuts x (or y if `is_flipped`) positions to cut along
+#' @param rows vector with either length 1 or length = `length(cuts) - 1` giving
+#' destination row id of each corresponding cut region (starting from 1).
+#' @param is_flipped are the axes flipped? (so `cuts` are `y` positions).
+#' @param is_clipped should output regions be clipped?
+#' @noRd
+translate_and_superimpose_grobs <- function(grobs, cuts, rows = 1L, is_flipped = FALSE, is_clipped = FALSE) {
+  rows <- vec_recycle(rows, length(cuts) - 1)
+
+  origin <- cuts[[1]]
+  xs <- cuts[-length(cuts)]
+  widths <- diff(cuts)
+
+  # Translate and superimpose the panel grob on itself repeatedly.
+  # I attempted to use defineGrob() + useGrob() here to improve efficiency
+  # (since theoretically it allows efficient repitition of a single grob
+  # drawn off-screen), I couldn't figure out how to make the grob defined
+  # by defineGrob() not be clipped by the first region it would theoretically
+  # have been drawn into given where it is in the grob tree, which meant
+  # it was always getting clipped. So I stuck to just repeatedly re-drawing
+  # the same grob.
+  .viewport <- flip_grid_fun(viewport, is_flipped)
+  .rectGrob <- flip_grid_fun(rectGrob, is_flipped)
+  grob <- inject(grobTree(!!!grobs))
+  translated_grobs <- .mapply(
+    function(x, width) {
+      grobTree(
+        grob,
+        vp = .viewport(
+          unit(origin - x, "npc"),
+          unit(0, "npc"),
+          just = c(0, 0),
+          clip = if (is_clipped) {
+            .rectGrob(
+              unit(x, "npc"), y = unit(0, "npc"),
+              width = unit(width, "npc"), height = unit(1, "npc"),
+              just = c(0,0)
+            )
+          } else {
+            "inherit"
+          }
+        )
+      )
+    },
+    list(xs, widths),
+    NULL
+  )
+
+  # # Uncomment for debug info --- region boundaries and centers
+  # centers <- rowMeans(embed(cuts, 2))
+  # translated_grobs <- c(
+  #   translated_grobs,
+  #   list(
+  #     rectGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), width = unit(widths, "npc"), gp = gpar(col = "red", fill = NA)),
+  #     pointsGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), gp = gpar(col = "red"))
+  #   )
+  # )
+
+  translated_grobs
 }
 
 #' Flip the x and y axes of a grid function
@@ -229,16 +234,16 @@ flip_grid_fun <- function(f, is_flipped) {
 }
 
 #' Get time cutpoints along a positional axis
-#' @param params Panel params, e.g. as returned by `Coord$setup_panel_params()`
+#' @param panel_params Panel params, e.g. as returned by `Coord$setup_panel_params()`
 #' and passed to `Coord$draw_panel(params = ...)`
 #' @param axis Axis to cut (`"x"` or `"y"`).
 #' @param by Duration to cut by
 #' @param ljust Loop justification, a number between 0 and 1
 #' @returns vector of time cutpoints
 #' @noRd
-cut_axis_time <- function(params, axis, by, ljust) {
-  trans <- params[[axis]]$get_transformation()
-  range <- params[[axis]]$limits
+cut_axis_time <- function(panel_params, axis, by, ljust) {
+  trans <- panel_params[[axis]]$get_transformation()
+  range <- panel_params[[axis]]$limits
   time_range <- trans$inverse(range)
   time_cuts <- unique(c(
     seq(time_range[1] - ljust, time_range[2] + (1 - ljust), by = by),
