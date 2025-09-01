@@ -53,9 +53,10 @@ A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} 
 A \code{Coord} ggproto object that can be added to a ggplot.
 }
 \description{
-Create a coordinate system that loops time series data over specified periods,
-allowing visualization of seasonal patterns by superimposing multiple time periods
-on top of each other.
+The looped coordinate system loops the cartesian coordinate system around
+specific loop points. This is particularly useful for visualising seasonal
+patterns that repeat over calendar periods, since the shape of seasonal
+patterns can be more easily seen when superimposed on top of each other.
 }
 \details{
 This coordinate system is particularly useful for visualizing seasonal or
