@@ -20,6 +20,7 @@ test_that("inf works", {
     ggplot(aes(x = year, y = lynx)) +
     geom_line(alpha = 0.25) +
     geom_hline(yintercept = 40000, color = "red") +
+    geom_vline(xintercept = 1848) +
     annotate("segment", x = -Inf, xend = Inf, y = 30000, yend = 30000) +
     scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 1))
 
