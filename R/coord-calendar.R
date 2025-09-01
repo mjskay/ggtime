@@ -1,15 +1,61 @@
 #' Calendar coordinates
 #'
-#' Create a coordinate system that wraps time series data over specified periods.
+#' The calendar coordinate system arranges time series data into a calendar-like
+#' layout, making it easier to see fine-grained temporal patterns over a long
+#' time span. It has similar semantics as the looped coordinate system
+#' ([coord_loop()]), however instead of overlaying looped data the calendar
+#' coordinate space arranges each loop into rows and columns like a calendar.
 #'
 #' @inheritParams coord_loop
 #'
-#' @importFrom gtable gtable_col gtable_row
+#' @param rows Layout the time scale into calendar rows, one of:
+#'   - `NULL` or `waiver()` for no rows (the default)
+#'   - A `mixtime` vector giving time points at which the `time` axis should layout into rows
+#'   - A function that takes the limits as input and returns row layout points as output
+#' @param time_rows A duration giving the distance between calendar rows like
+#' "1 weeks", or "1 month". If both `rows` and `time_rows` are
+#' specified, `time_rows` wins.
+#' @param cols,time_cols Not yet supported.
+# @param cols Layout the time scale into calendar columns, one of:
+#   - `NULL` or `waiver()` for no columns (the default)
+#   - A `mixtime` vector giving time points at which the `time` axis should layout into columns
+#   - A function that takes the limits as input and returns column layout points as output
+# @param time_cols A duration giving the distance between calendar columns like
+# "1 weeks", or "1 month". If both `cols` and `time_cols` are
+# specified, `time_cols` wins.
+#' @param clip_rows Should the drawing of each loop of the timescale be clipped to
+#'   the breaks defined by `time_rows` and `ljust`?
+#'   A setting of `"on"` (the default) means yes, and a setting of `"off"` means no.
 #'
+#' @details
+#' This coordinate system is particularly useful for visualizing long time spans
+#' with events that occur over short intervals (such as holidays).
+#'
+#' It works by:
+#'
+#' \enumerate{
+#'   \item Dividing the time axis into segments based on the specified row (and column) periods
+#'   \item Translating each panel into the rows and columns of a calendar layout
+#' }
+#'
+#' The coordinate system requires R version 4.2.0 or higher due to its use of
+#' usage of clipping paths.
+#'
+#' @examples
+#' # Visualise several months of Melbourne pedestrian counts across weekly rows
+#' tsibble::pedestrian |>
+#'   dplyr::filter(Date < "2015-04-01") |>
+#'   ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
+#'   geom_line() +
+#'   coord_calendar(time_rows = "1 week")
+#'
+#' @importFrom gtable gtable_col gtable_row
 #' @export
 coord_calendar <- function(
-  loops = waiver(),
-  time_loops = waiver(),
+  rows = waiver(),
+  time_rows = waiver(),
+  cols = waiver(),
+  time_cols = waiver(),
   time = "x",
   ljust = 0.5,
   xlim = NULL,
@@ -17,21 +63,26 @@ coord_calendar <- function(
   expand = FALSE,
   default = FALSE,
   clip = "on",
-  clip_loops = "on",
+  clip_rows = "on",
   coord = coord_cartesian()
 ) {
+  if (!is_waiver(cols) || !is_waiver(time_cols)) {
+    stop(
+      "`cols` and `time_cols` are not currently supported in coord_calendar()"
+    )
+  }
   ggplot2::ggproto(
     NULL,
     CoordCalendar(coord),
-    loops = loops,
-    time_loops = time_loops,
+    loops = rows,
+    time_loops = time_rows,
     time = time,
     ljust = ljust,
     limits = list(x = xlim, y = ylim),
     expand = expand,
     default = default,
     clip = clip,
-    clip_loops = clip_loops
+    clip_loops = clip_rows
   )
 }
 

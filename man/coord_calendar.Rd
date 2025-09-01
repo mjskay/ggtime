@@ -5,8 +5,10 @@
 \title{Calendar coordinates}
 \usage{
 coord_calendar(
-  loops = waiver(),
-  time_loops = waiver(),
+  rows = waiver(),
+  time_rows = waiver(),
+  cols = waiver(),
+  time_cols = waiver(),
   time = "x",
   ljust = 0.5,
   xlim = NULL,
@@ -14,21 +16,23 @@ coord_calendar(
   expand = FALSE,
   default = FALSE,
   clip = "on",
-  clip_loops = "on",
+  clip_rows = "on",
   coord = coord_cartesian()
 )
 }
 \arguments{
-\item{loops}{Loop the time scale around a calendrical granularity, one of:
+\item{rows}{Layout the time scale into calendar rows, one of:
 \itemize{
-\item \code{NULL} or \code{waiver()} for no looping (the default)
-\item A \code{mixtime} vector giving time points at which the \code{time} axis should loop
-\item A function that takes the limits as input and returns loop points as output
+\item \code{NULL} or \code{waiver()} for no rows (the default)
+\item A \code{mixtime} vector giving time points at which the \code{time} axis should layout into rows
+\item A function that takes the limits as input and returns row layout points as output
 }}
 
-\item{time_loops}{A duration giving the distance between temporal
-loops like "2 weeks", or "10 years". If both \code{loops} and \code{time_loops} are
-specified, \code{time_loops} wins.}
+\item{time_rows}{A duration giving the distance between calendar rows like
+"1 weeks", or "1 month". If both \code{rows} and \code{time_rows} are
+specified, \code{time_rows} wins.}
+
+\item{cols, time_cols}{Not yet supported.}
 
 \item{time}{A string specifying which aesthetic contains the time variable that
 should be looped over. Default is \code{"x"}.}
@@ -48,12 +52,39 @@ Default is \code{FALSE}.}
 \item{clip}{Should drawing be clipped to the extent of the plot panel?
 A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
 
-\item{clip_loops}{Should the drawing of each loop of the timescale be clipped to
-the breaks defined by \code{time_loops} and \code{ljust}?
+\item{clip_rows}{Should the drawing of each loop of the timescale be clipped to
+the breaks defined by \code{time_rows} and \code{ljust}?
 A setting of \code{"on"} (the default) means yes, and a setting of \code{"off"} means no.}
 
 \item{coord}{The underlying coordinate system to use. Default is \code{coord_cartesian()}.}
 }
 \description{
-Create a coordinate system that wraps time series data over specified periods.
+The calendar coordinate system arranges time series data into a calendar-like
+layout, making it easier to see fine-grained temporal patterns over a long
+time span. It has similar semantics as the looped coordinate system
+(\code{\link[=coord_loop]{coord_loop()}}), however instead of overlaying looped data the calendar
+coordinate space arranges each loop into rows and columns like a calendar.
+}
+\details{
+This coordinate system is particularly useful for visualizing long time spans
+with events that occur over short intervals (such as holidays).
+
+It works by:
+
+\enumerate{
+\item Dividing the time axis into segments based on the specified row (and column) periods
+\item Translating each panel into the rows and columns of a calendar layout
+}
+
+The coordinate system requires R version 4.2.0 or higher due to its use of
+usage of clipping paths.
+}
+\examples{
+# Visualise several months of Melbourne pedestrian counts across weekly rows
+tsibble::pedestrian |>
+  dplyr::filter(Date < "2015-04-01") |>
+  ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
+  geom_line() +
+  coord_calendar(time_rows = "1 week")
+
 }

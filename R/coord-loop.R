@@ -114,10 +114,18 @@ CoordLoop <- function(coord) {
 
       # Determine the cutpoints where we will loop
       if (is_waiver(self$loops)) {
-        self$loops <- cut_axis_time(uncut_params, self$time, self$time_loops, self$ljust)
+        self$loops <- cut_axis_time(
+          uncut_params,
+          self$time,
+          self$time_loops,
+          self$ljust
+        )
       } else {
         self$loops <- sort(unique(self$loops))
-        self$loops <- c(self$loops - self$ljust, self$loops[length(self$loops)] + (1 - self$ljust))
+        self$loops <- c(
+          self$loops - self$ljust,
+          self$loops[length(self$loops)] + (1 - self$ljust)
+        )
       }
 
       # Recalculate the panel parameters zoomed in on the first region.
@@ -142,7 +150,7 @@ CoordLoop <- function(coord) {
     },
 
     draw_panel = function(self, panel, params, theme) {
-      is_clipped = isTRUE(self$clip_loops %in% c("on", TRUE))  # could have stricter validation
+      is_clipped = isTRUE(self$clip_loops %in% c("on", TRUE)) # could have stricter validation
       if (is_clipped && !ggplot2::check_device("clippingPaths")) {
         stop("Looped coordinates requires R v4.2.0 or higher.")
       }
@@ -173,13 +181,20 @@ CoordLoop <- function(coord) {
 #' @param is_flipped are the axes flipped? (so `cuts` are `y` positions).
 #' @param is_clipped should output regions be clipped?
 #' @noRd
-translate_and_superimpose_grobs <- function(grobs, cuts, rows, n_row, is_flipped = FALSE, is_clipped = FALSE) {
+translate_and_superimpose_grobs <- function(
+  grobs,
+  cuts,
+  rows,
+  n_row,
+  is_flipped = FALSE,
+  is_clipped = FALSE
+) {
   origin <- cuts[[1]]
   xs <- cuts[-length(cuts)]
   widths <- diff(cuts)
 
-  ys <- 1 - rows/n_row
-  height <- 1/n_row
+  ys <- 1 - rows / n_row
+  height <- 1 / n_row
 
   # Translate and superimpose the panel grob on itself repeatedly.
   # I attempted to use defineGrob() + useGrob() here to improve efficiency
@@ -203,9 +218,11 @@ translate_and_superimpose_grobs <- function(grobs, cuts, rows, n_row, is_flipped
           just = c(0, 0),
           clip = if (is_clipped) {
             .rectGrob(
-              unit(x, "npc"), y = unit(0, "npc"),
-              width = unit(width, "npc"), height = unit(1, "npc"),
-              just = c(0,0)
+              unit(x, "npc"),
+              y = unit(0, "npc"),
+              width = unit(width, "npc"),
+              height = unit(1, "npc"),
+              just = c(0, 0)
             )
           } else {
             "inherit"
@@ -237,9 +254,20 @@ translate_and_superimpose_grobs <- function(grobs, cuts, rows, n_row, is_flipped
 #' arguments (`x`, `y`, `width`, `height`, ...) swapped.
 #' @noRd
 flip_grid_fun <- function(f, is_flipped) {
-  if (!is_flipped) return(f)
+  if (!is_flipped) {
+    return(f)
+  }
   new_f <- function(x, y, width, height, just, hjust, vjust, ...) {
-    f(x = y, y = x, width = height, height = width, just = rev(just), hjust = vjust, vjust = hjust, ...)
+    f(
+      x = y,
+      y = x,
+      width = height,
+      height = width,
+      just = rev(just),
+      hjust = vjust,
+      vjust = hjust,
+      ...
+    )
   }
   formals(new_f)[c("x", "y", "width", "height", "hjust", "vjust")] <-
     formals(f)[c("y", "x", "height", "width", "vjust", "hjust")]
