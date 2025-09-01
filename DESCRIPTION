@@ -65,7 +65,12 @@ Suggests:
     ggrepel,
     roxygen2,
     ggdist,
-    distributional
+    distributional,
+    vdiffr,
+    svglite,
+    fontquiver,
+    sysfonts,
+    showtext
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
