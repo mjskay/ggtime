@@ -15,6 +15,10 @@ authors:
     href: http://robjhyndman.com
   Mitchell O'Hara-Wild:
     href: https://mitchelloharawild.com
+  Cynthia Huang:
+    href: https://www.cynthiahqy.com
+  Matthew Kay:
+    href: https://www.mjskay.com
   Earo Wang:
     href: https://earo.me
 
@@ -31,4 +35,25 @@ navbar:
       href: articles/ggtime.html
   right:
   - icon: fa-github fa-lg
-    href: https://github.com/tidyverts/ggtime
+    href: https://github.com/mitchelloharawild/ggtime
+
+reference:
+- title: Plot helpers
+  desc: >
+    Plot helper functions suitable for quickly creating time series plots during a data analysis workflow. These functions are convenient to use, but have limited customisation options. For more control, use the grammar extensions to construct the plots directly.
+  contents:
+    - starts_with("gg_")
+    - starts_with("autoplot")
+    - starts_with("autolayer")
+- title: Grammar extensions
+  desc: >
+    Extensions to the ggplot2 grammar of graphics for plotting time series data. These functions provide greater customisation options than the plot helpers, but require more code to set up.
+  contents:
+    - starts_with("geom_")
+    - starts_with("stat_")
+    - starts_with("scale_")
+    - starts_with("coord_")
+    - starts_with("facet_")
+    - starts_with("theme_")
+    - starts_with("position_")
+    - starts_with("range_")
