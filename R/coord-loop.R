@@ -134,12 +134,14 @@ CoordLoop <- function(coord) {
         params
       )
       cut_params$time_cuts <- self$loops
+      cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
+      cut_params$n_row <- 1L
+      cut_params$is_flipped <- isTRUE(self$time == "y")
       cut_params
     },
 
     draw_panel = function(self, panel, params, theme) {
       is_clipped = isTRUE(self$clip_loops %in% c("on", TRUE))  # could have stricter validation
-      is_flipped = isTRUE(self$time == "y")
       if (is_clipped && !ggplot2::check_device("clippingPaths")) {
         stop("Looped coordinates requires R v4.2.0 or higher.")
       }
@@ -147,7 +149,14 @@ CoordLoop <- function(coord) {
       # Get cutpoints along the axis for dividing the panel grob into regions
       cuts <- params[[self$time]]$rescale(params$time_cuts)
 
-      translated_panels <- translate_and_superimpose_grobs(panel, cuts, 1L, is_flipped, is_clipped)
+      translated_panels <- translate_and_superimpose_grobs(
+        panel,
+        cuts,
+        params$time_rows,
+        params$n_row,
+        params$is_flipped,
+        is_clipped
+      )
 
       ggproto_parent(coord, self)$draw_panel(translated_panels, params, theme)
     }
@@ -157,17 +166,19 @@ CoordLoop <- function(coord) {
 #' Translate and superimpose grobs at specified cutpoints along x (or y) axis
 #' @param grobs list of grobs
 #' @param cuts x (or y if `is_flipped`) positions to cut along
-#' @param rows vector with either length 1 or length = `length(cuts) - 1` giving
+#' @param rows vector with length = `length(cuts) - 1` giving
 #' destination row id of each corresponding cut region (starting from 1).
+#' @param n_row maximum row in the layout
 #' @param is_flipped are the axes flipped? (so `cuts` are `y` positions).
 #' @param is_clipped should output regions be clipped?
 #' @noRd
-translate_and_superimpose_grobs <- function(grobs, cuts, rows = 1L, is_flipped = FALSE, is_clipped = FALSE) {
-  rows <- vec_recycle(rows, length(cuts) - 1)
-
+translate_and_superimpose_grobs <- function(grobs, cuts, rows, n_row, is_flipped = FALSE, is_clipped = FALSE) {
   origin <- cuts[[1]]
   xs <- cuts[-length(cuts)]
   widths <- diff(cuts)
+
+  ys <- 1 - rows/n_row
+  height <- 1/n_row
 
   # Translate and superimpose the panel grob on itself repeatedly.
   # I attempted to use defineGrob() + useGrob() here to improve efficiency
@@ -181,12 +192,13 @@ translate_and_superimpose_grobs <- function(grobs, cuts, rows = 1L, is_flipped =
   .rectGrob <- flip_grid_fun(rectGrob, is_flipped)
   grob <- inject(grobTree(!!!grobs))
   translated_grobs <- .mapply(
-    function(x, width) {
+    function(x, y, width) {
       grobTree(
         grob,
         vp = .viewport(
-          unit(origin - x, "npc"),
-          unit(0, "npc"),
+          x = unit(origin - x, "npc"),
+          y = unit(y, "npc"),
+          height = unit(height, "npc"),
           just = c(0, 0),
           clip = if (is_clipped) {
             .rectGrob(
@@ -200,7 +212,7 @@ translate_and_superimpose_grobs <- function(grobs, cuts, rows = 1L, is_flipped =
         )
       )
     },
-    list(xs, widths),
+    list(xs, ys, widths),
     NULL
   )
 
