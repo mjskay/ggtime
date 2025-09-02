@@ -166,8 +166,8 @@ CoordLoop <- function(coord) {
       range <- transform_position(self$backtransform_range(panel_params), x, y)
       transform_position(
         data,
-        function(x) squish_infinite(x, range$x),
-        function(y) squish_infinite(y, range$y)
+        function(x) scales::squish_infinite(x, range$x),
+        function(y) scales::squish_infinite(y, range$y)
       )
     },
 
