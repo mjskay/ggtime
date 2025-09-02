@@ -155,9 +155,13 @@ CoordLoop <- function(coord) {
     },
 
     range = function(self, panel_params) {
-      # range needs to be calculated on the uncut scale so that (e.g.)
+      # range needs to consider both the cut and the uncut scale so that (e.g.)
       # the position of infinities is correct
-      ggproto_parent(coord, self)$range(panel_params$uncut)
+      Map(
+        range,
+        ggproto_parent(coord, self)$range(panel_params),
+        ggproto_parent(coord, self)$range(panel_params$uncut)
+      )
     },
 
     transform = function(self, data, panel_params) {
