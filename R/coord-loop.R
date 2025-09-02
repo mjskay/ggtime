@@ -99,6 +99,8 @@ CoordLoop <- function(coord) {
     "CoordLoop",
     coord,
 
+    n_row = 1L,
+
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
       # We need to adjust the panel parameters so that the scale is zoomed in
       # on the first region (which we will translate all other regions onto in draw_panel).
@@ -147,7 +149,6 @@ CoordLoop <- function(coord) {
 
       cut_params$time_cuts <- time_cuts
       cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
-      cut_params$n_row <- 1L
       cut_params$is_flipped <- isTRUE(self$time == "y")
       cut_params$uncut <- uncut_params
       cut_params
@@ -187,7 +188,7 @@ CoordLoop <- function(coord) {
         panel,
         cuts,
         params$time_rows,
-        params$n_row,
+        self$n_row,
         params$is_flipped,
         is_clipped
       )
