@@ -80,6 +80,8 @@ The coordinate system requires R version 4.2.0 or higher due to its use of
 usage of clipping paths.
 }
 \examples{
+library(ggplot2)
+
 # Visualise several months of Melbourne pedestrian counts across weekly rows
 tsibble::pedestrian |>
   dplyr::filter(Date < "2015-04-01") |>
