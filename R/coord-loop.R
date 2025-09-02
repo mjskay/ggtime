@@ -114,35 +114,38 @@ CoordLoop <- function(coord) {
 
       # Determine the cutpoints where we will loop
       if (is_waiver(self$loops)) {
-        self$loops <- cut_axis_time(
+        time_cuts <- cut_axis_time(
           uncut_params,
           self$time,
           self$time_loops,
           self$ljust
         )
       } else {
-        self$loops <- sort(unique(self$loops))
-        self$loops <- c(
-          self$loops - self$ljust,
-          self$loops[length(self$loops)] + (1 - self$ljust)
+        time_cuts <- sort(unique(self$loops))
+        time_cuts <- c(
+          time_cuts - self$ljust,
+          time_cuts[length(time_cuts)] + (1 - self$ljust)
         )
       }
 
       # Recalculate the panel parameters zoomed in on the first region.
       # Doing it this way should apply expand settings, etc, again.
       # (comment out this line to disable zooming for debugging)
+      old_limits <- self$limits
       self$limits[[self$time]] <- c(
         # Restart at the first time point
-        self$loops[1],
+        time_cuts[1],
         # End at the longest time point in the loop
-        self$loops[1] + max(diff(self$loops))
+        time_cuts[1] + max(diff(time_cuts))
       )
       cut_params <- ggproto_parent(coord, self)$setup_panel_params(
         scale_x,
         scale_y,
         params
       )
-      cut_params$time_cuts <- self$loops
+      self$limits <- old_limits
+
+      cut_params$time_cuts <- time_cuts
       cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
       cut_params$n_row <- 1L
       cut_params$is_flipped <- isTRUE(self$time == "y")
