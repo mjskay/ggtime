@@ -312,6 +312,10 @@ cut_axis_time <- function(panel_params, axis, by, ljust) {
   trans <- panel_params[[axis]]$get_transformation()
   range <- panel_params[[axis]]$limits
   time_range <- trans$inverse(range)
+  if (is.character(by)) {
+    time_range[1] <- lubridate::floor_date(time_range[1], by)
+    time_range[2] <- lubridate::ceiling_date(time_range[2], by)
+  }
   time_cuts <- unique(c(
     seq(time_range[1] - ljust, time_range[2] + (1 - ljust), by = by),
     time_range[2]
