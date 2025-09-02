@@ -88,6 +88,7 @@ GeomTimeLine <- ggproto(
     # * Add dashed lines for y-axis offsets
     # * Add gaps for implicit missing values
     # * Use linear interpolation to calculate trend values at the timezone changes
+    # * Add warning for sawtoothing (violation of uniqueness condition)
 
     # If the data is regular across a timezone change (offset) then draw a dashed line
     # Otherwise, there is a gap and there is no dashed timezone line
