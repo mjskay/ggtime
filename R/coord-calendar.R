@@ -62,6 +62,8 @@
 #' give more space between months and/or years of the calendar.
 #'
 #' @examples
+#' library(ggplot2)
+#'
 #' # A weekly calendar arrangement of pedestrian counts in Melbourne
 #' # Notice the periods of high activity days for the Birrarung Marr sensor
 #' # during the Australian Open tennis tournament in late January.

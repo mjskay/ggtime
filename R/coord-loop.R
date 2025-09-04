@@ -212,7 +212,29 @@ CoordLoop <- function(coord) {
       cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
       cut_params$n_row <- 1L
       cut_params$is_flipped <- isTRUE(self$time == "y")
+      cut_params$uncut <- uncut_params
       cut_params
+    },
+
+    range = function(self, panel_params) {
+      # range needs to be calculated on the uncut scale so that (e.g.)
+      # the position of infinities is correct
+      ggproto_parent(coord, self)$range(panel_params$uncut)
+    },
+
+    transform = function(self, data, panel_params) {
+      reverse <- panel_params$reverse %||% "none"
+      x <- panel_params$x[[switch(reverse, xy = , x = "reverse", "rescale")]]
+      y <- panel_params$y[[switch(reverse, xy = , y = "reverse", "rescale")]]
+      data <- transform_position(data, x, y)
+      # need to use the full range for squish_infinite otherwise segments with
+      # infinite endpoints are not repeated over rows in coord_calendar
+      range <- transform_position(self$backtransform_range(panel_params), x, y)
+      transform_position(
+        data,
+        function(x) scales::squish_infinite(x, range$x),
+        function(y) scales::squish_infinite(y, range$y)
+      )
     },
 
     draw_panel = function(self, panel, params, theme) {
