@@ -32,24 +32,24 @@ PositionTimeCivil <- ggproto(
   # individual timezones from each calendar need to be used here.
   compute_panel = function(self, data, params, scales) {
     if (inherits(scales$x, "ScaleContinuousDatetime")) {
-      data$xoffset <- gmt_offset(scales$x$get_transformation()$inverse(
+      data$xtimeoffset <- gmt_offset(scales$x$get_transformation()$inverse(
         data$x
       ))
       scales$x$timezone <- "UTC"
     }
     if (inherits(scales$y, "ScaleContinuousDatetime")) {
-      data$yoffset <- gmt_offset(scales$y$get_transformation()$inverse(
+      data$ytimeoffset <- gmt_offset(scales$y$get_transformation()$inverse(
         data$y
       ))
       scales$y$timezone <- "UTC"
     }
 
     # Apply offset to x/y positions
-    if (!is.null(data$xoffset)) {
-      data$x <- data$x + data$xoffset
+    if (!is.null(data$xtimeoffset)) {
+      data$x <- data$x + data$xtimeoffset
     }
-    if (!is.null(data$yoffset)) {
-      data$y <- data$y + data$yoffset
+    if (!is.null(data$ytimeoffset)) {
+      data$y <- data$y + data$ytimeoffset
     }
 
     # TODO: Update mixtime scales to enforce labelling in UTC time
@@ -75,7 +75,7 @@ PositionTimeAbsolute <- ggproto(
   required_aes = c("x|y"),
 
   compute_panel = function(self, data, params, scales) {
-    data$xoffset <- data$yoffset <- 0
+    data$xtimeoffset <- data$ytimeoffset <- 0
     data
   }
 )
