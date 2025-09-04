@@ -68,6 +68,24 @@ A monthly calendar is set up as a 5 by 7 layout matrix. Each month could
 extend over six weeks but in these months is to wrap the last few days up
 to the top row of the block.
 }
+\section{Practical usage}{
+
+
+Calendar facetting allows time to be plotted into separate panels, arranged
+across rows and columns in a calendar-like layout. This is particularly
+useful when facetting by time units within a seasonal period, as this shows
+changes in the seasonal pattern over time (commonly referred to as a
+seasonal subseries plot). For example, changes in the annual seasonal
+pattern of quarterly beer production in Australia can be seen by facetting by
+month of the year. More advanced calendar layouts are possible by facetting
+across multiple seasonal periods, such as arranging hour of the day across
+columns and day of the week across rows to show changes in the daily and
+weekly seasonal patterns.
+
+If you wish to simply plot time series data in the style of a calendar, you
+should instead use the \code{\link[=coord_calendar]{coord_calendar()}} coordinate system.
+}
+
 \examples{
 \donttest{
 library(ggplot2)
