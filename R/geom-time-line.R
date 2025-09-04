@@ -27,17 +27,122 @@
 #'  [position_time_civil()]/[position_time_absolute()] for civil and absolute time positioning.
 #'
 #'  [ggplot2::geom_line()]/[ggplot2::geom_path()] for standard line/path geoms in ggplot2.
-#' @section Missing value handling:
-#' `geom_time_line()` handles missing values similar to [ggplot2::geom_line()], but with
-#' additional logic for implicit missing values in time series. Implicit missing
-#' values (gaps in regular time intervals) are not connected, creating breaks in
-#' the line without warnings.
+#'
+#' @section Practical usage:
+#'
+#' The `geom_time_line()` geometry extends [ggplot2::geom_line()] with time
+#' semantics that ensure the line's slope accurately reflects rates of change in
+#' the measurements over time.
+#'
+#'
+#' Most notably, `geom_time_line()` works closely with [position_time_civil()]
+#' and [position_time_absolute()] to correctly display time in civil and
+#' absolute time formats, respectively. Civil time positioning (the default)
+#' shows time as experienced in a specific timezone (also known as 'local time',
+#' it is the time on clocks in that timezone). Absolute time positioning shows
+#' time as a continuous timeline without timezone adjustments.
+#'
+#'
+#' When time series are visualised in civil time, timezone offset changes (e.g.
+#' due to daylight saving time) cause 'jumps' in time which are indicated with
+#' dashed lines. This preserves the integrity of the line's slope across these
+#' transitions. Another benefit of visualising time series in civil time is to
+#' compare time series across different timezones, as the time axis is better
+#' aligned with human behaviour in their local timezone (e.g. working hours,
+#' sleep patterns, etc). Plotting time series in *absolute time* shows the exact
+#' contemporaneous timing of events across multiple timezones, which is useful
+#' when resources or patterns are shared across timezones (e.g. international
+#' markets, server load balancing, etc).
+#'
+#'
+#' This geometry also maintains semantically valid slopes when time values are
+#' missing (either implicitly or explicitly), or duplicated. Implicit missing
+#' values in regular time series are semantically equivalent to explicit missing
+#' values, and `geom_time_line()` since the slope between unkown values is also
+#' unknown, `geom_time_line()` will not draw lines connecting missing values of
+#' either type. Since duplicated time values are not semantically valid in
+#' regular time series, `geom_time_line()` will issue a warning (or an error if
+#' systematic duplicates are detected). When drawing a line between duplicated
+#' time points, the correct slopes are drawn by connecting all lines that lead
+#' to and from the duplicated time points (rather than drawing sawtooth lines).
+#'
+#'
+# #' Using `geom_time_line()` instead of `geom_line()` for visualising time series
+# # ' data...
+#'
+#' Further details about each specific capability are described in the following
+#' sections.
 #'
 #' @section Changing time offsets:
+#'
 #' The `xtimeoffset` and `ytimeoffset` aesthetics allow for visualization of time
 #' offset changes, such as timezone transitions or daylight saving time changes.
 #' When successive time offsets differ, a dashed line segment is drawn to show
-#' the offset transition.
+#' the offset transition. These aesthetics are automatically set when using
+#' `position` = [position_time_civil()] (the default), however the offsets can
+#' also be set manually to show other types of time offsets. One example of when
+#' it is useful to set the offsets manually is when showing measurements from a
+#' sensor with a known time drift (e.g. a clock that runs fast or slow) that is
+#' re-calibrated at known times.
+#'
+#' @section Missing time values:
+#'
+#' Explicit missing values are where an `NA` value is included in the data, but
+#' for regular time series it is also possible to identify implicit missing time
+#' values. Unlike [ggplot2::geom_line()], `geom_time_line()` will also not connect
+#' points separated by implicit missing values, creating gaps in the line (just
+#' like when an explicit missing value is present in [ggplot2::geom_line()]).
+#'
+#' @section Duplicated time values:
+#'
+#' If there are duplicated time values within a group, `geom_time_line()` will
+#' issue a warning. An error will be raised if these duplications are systematic
+#' across the geometry, specifically if more than 50% of time points contain the
+#' same number of duplicates. Systematic duplicates typically indicate a need to
+#' use grouping aesthetics ([ggplot2::group()], or [ggplot2::colour()]) to
+#' draw separate lines for each time series. Rather than plotting an erroneous
+#' 'sawtooth' line which misrepresents the rate of change, the geometry will
+#' draw all lines that connect to and from each of the duplicated time values.
+#'
+#' @examples
+#'
+#' library(ggplot2)
+#'
+#'
+#' # Basic time line plot of a random walk (no timezone changes)
+#' df_ts <- data.frame(
+#'   time = as.POSIXct("2023-03-11", tz = "Australia/Melbourne") + 0:11 * 3600,
+#'   value = cumsum(rnorm(12, 2))
+#' )
+#' ggplot(df_rw, aes(time, value)) +
+#'   geom_time_line()
+#'
+#' # Random walk with a backward timezone change (DST ends)
+#' df_tz_back <- data.frame(
+#'   time = as.POSIXct("2023-04-02", tz = "Australia/Melbourne") + 0:11 * 3600,
+#'   value = cumsum(rnorm(12, 2))
+#' )
+#' ggplot(df_tz_back, aes(time, value)) +
+#'   geom_time_line()
+#'
+#' # Random walk with a forward timezone change (DST starts)
+#' df_tz_forward <- data.frame(
+#'   time = as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:11 * 3600,
+#'   value = cumsum(rnorm(12, 2))
+#' )
+#' ggplot(df_tz_forward, aes(time, value)) +
+#'   geom_time_line()
+#'
+# #' # Implicit missing values (WIP)
+# #' df_missing <- df_ts[-c(4, 7, 8), ]
+# #' ggplot(df_missing, aes(time, value)) +
+# #'   geom_time_line()
+# #'
+# #' # Duplicate time values (WIP)
+# #' df_duplicated <- rbind(df_ts, df_ts[c(5, 9), ])
+# #' df_duplicated[12:13, "value"] <- df_duplicated[12:13, "value"] + 5
+# #' ggplot(df_duplicated, aes(time, value)) +
+# #'   geom_time_line()
 #'
 #' @export
 geom_time_line <- function(
@@ -89,6 +194,7 @@ GeomTimeLine <- ggproto(
     # * Add gaps for implicit missing values
     # * Use linear interpolation to calculate trend values at the timezone changes
     # * Add warning for sawtoothing (violation of uniqueness condition)
+    # * Multiple lines for duplicated time values
 
     # If the data is regular across a timezone change (offset) then draw a dashed line
     # Otherwise, there is a gap and there is no dashed timezone line
