@@ -198,6 +198,8 @@ df_tz_back <- data.frame(
 )
 ggplot(df_tz_back, aes(time, value)) +
   geom_time_line()
+ggplot(df_tz_back, aes(time, value)) +
+  geom_time_line(position = position_time_absolute())
 
 # Random walk with a forward timezone change (DST starts)
 df_tz_forward <- data.frame(
@@ -206,6 +208,8 @@ df_tz_forward <- data.frame(
 )
 ggplot(df_tz_forward, aes(time, value)) +
   geom_time_line()
+ggplot(df_tz_forward, aes(time, value)) +
+ geom_time_line(position = position_time_absolute())
 
 
 }
