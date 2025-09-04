@@ -79,12 +79,44 @@ It works by:
 The coordinate system requires R version 4.2.0 or higher due to its use of
 usage of clipping paths.
 }
+\section{Practical usage}{
+
+
+The calendar coordinate system arranges a cartesian coordinate system into a
+dense calendar-like layout. Calendar layouts are particularly useful for
+identifying specific dates or events that occur over short intervals in long
+series. For example, the daily pedestrian counts at Melbourne's Birrarung
+Marr park is nearby to several major sporting venues, and the calendar layout
+makes obvious the spikes in pedestrian activity that occur during annual
+sporting events (such as the Australian Open tennis tournament). Calendar
+layouts are also useful to identify the effect of holidays, especially when
+their dates change each year (such as Easter).
+
+Similarly to \code{\link[=coord_loop]{coord_loop()}}, the calendar coordinate system draws geometries
+that cross the boundaries of calendar rows or columns. The justification of
+these geometries can be controlled with the \code{ljust} parameter, as described
+in \code{\link[=coord_loop]{coord_loop()}}.
+
+The calendar coordinate system works well in conjunction with facetting to
+give more space between months and/or years of the calendar.
+}
+
 \examples{
-# Visualise several months of Melbourne pedestrian counts across weekly rows
+# A weekly calendar arrangement of pedestrian counts in Melbourne
+# Notice the periods of high activity days for the Birrarung Marr sensor
+# during the Australian Open tennis tournament in late January.
 tsibble::pedestrian |>
-  dplyr::filter(Date < "2015-04-01") |>
+  dplyr::filter(Date < "2015-02-01") |>
   ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
   geom_line() +
   coord_calendar(time_rows = "1 week")
+
+# Monthly facets can be used to create a complete calendar for 2015.
+tsibble::pedestrian |>
+  dplyr::filter(year(Date) == 2015) |>
+  ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
+  geom_line() +
+  coord_calendar(time_rows = "1 week") +
+  facet_wrap(~ lubridate::month(Date, label = TRUE), ncol = 3)
 
 }
