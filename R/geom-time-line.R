@@ -1,19 +1,20 @@
-#' Connect time observations with offset handling
+#' Line geometry with temporal semantics
 #'
 #' @description
 #' `geom_time_line()` connects observations in order of the time variable, similar to
-#' [ggplot2::geom_line()], but with special handling for time gaps and changes in time offsets.
+#' [ggplot2::geom_line()], but with special handling for time zones, gaps and
+#' duplicated values.
 #'
 #' The geometry helps to visualise time with changing time offsets provided by the
 #' `[x/y]timeoffset` aesthetics. Changes in time offsets are drawn using dashed lines,
 #' which are most commonly used for timezone changes and daylight savings time transitions.
 #' Timezone offsets are automatically used when times from the `mixtime` package are used
-#' in conjunction with `position_time_civil()` positioning (the default).
+#' in conjunction with [position_time_civil()] positioning (the default).
 #'
 #' This geometry also respects implicit missing values in regular time series, and will
 #' not connect temporal observations separated by gaps.
 #'
-#' The `group` aesthetic determines which cases are connected together.
+#' The [ggplot2::group] aesthetic determines which cases are connected together.
 #'
 #' @aesthetics GeomTimeLine
 #' @inheritParams ggplot2::layer
@@ -99,7 +100,7 @@
 #' issue a warning. An error will be raised if these duplications are systematic
 #' across the geometry, specifically if more than 50% of time points contain the
 #' same number of duplicates. Systematic duplicates typically indicate a need to
-#' use grouping aesthetics ([ggplot2::group()], or [ggplot2::colour()]) to
+#' use grouping aesthetics ([ggplot2::group], or [ggplot2::colour]) to
 #' draw separate lines for each time series. Rather than plotting an erroneous
 #' 'sawtooth' line which misrepresents the rate of change, the geometry will
 #' draw all lines that connect to and from each of the duplicated time values.

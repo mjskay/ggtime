@@ -2,7 +2,7 @@
 % Please edit documentation in R/geom-time-line.R
 \name{geom_time_line}
 \alias{geom_time_line}
-\title{Connect time observations with offset handling}
+\title{Line geometry with temporal semantics}
 \usage{
 geom_time_line(
   mapping = NULL,
@@ -87,35 +87,128 @@ data and aesthetics and shouldn't inherit behaviour from the default plot specif
 }
 \description{
 \code{geom_time_line()} connects observations in order of the time variable, similar to
-\code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}, but with special handling for time gaps and changes in time offsets.
+\code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}, but with special handling for time zones, gaps and
+duplicated values.
 
 The geometry helps to visualise time with changing time offsets provided by the
 \verb{[x/y]timeoffset} aesthetics. Changes in time offsets are drawn using dashed lines,
 which are most commonly used for timezone changes and daylight savings time transitions.
 Timezone offsets are automatically used when times from the \code{mixtime} package are used
-in conjunction with \code{position_time_civil()} positioning (the default).
+in conjunction with \code{\link[=position_time_civil]{position_time_civil()}} positioning (the default).
 
 This geometry also respects implicit missing values in regular time series, and will
 not connect temporal observations separated by gaps.
 
-The \code{group} aesthetic determines which cases are connected together.
+The \link[ggplot2:aes_group_order]{ggplot2::group} aesthetic determines which cases are connected together.
 }
-\section{Missing value handling}{
+\section{Practical usage}{
 
-\code{geom_time_line()} handles missing values similar to \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}, but with
-additional logic for implicit missing values in time series. Implicit missing
-values (gaps in regular time intervals) are not connected, creating breaks in
-the line without warnings.
+
+The \code{geom_time_line()} geometry extends \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}} with time
+semantics that ensure the line's slope accurately reflects rates of change in
+the measurements over time.
+
+Most notably, \code{geom_time_line()} works closely with \code{\link[=position_time_civil]{position_time_civil()}}
+and \code{\link[=position_time_absolute]{position_time_absolute()}} to correctly display time in civil and
+absolute time formats, respectively. Civil time positioning (the default)
+shows time as experienced in a specific timezone (also known as 'local time',
+it is the time on clocks in that timezone). Absolute time positioning shows
+time as a continuous timeline without timezone adjustments.
+
+When time series are visualised in civil time, timezone offset changes (e.g.
+due to daylight saving time) cause 'jumps' in time which are indicated with
+dashed lines. This preserves the integrity of the line's slope across these
+transitions. Another benefit of visualising time series in civil time is to
+compare time series across different timezones, as the time axis is better
+aligned with human behaviour in their local timezone (e.g. working hours,
+sleep patterns, etc). Plotting time series in \emph{absolute time} shows the exact
+contemporaneous timing of events across multiple timezones, which is useful
+when resources or patterns are shared across timezones (e.g. international
+markets, server load balancing, etc).
+
+This geometry also maintains semantically valid slopes when time values are
+missing (either implicitly or explicitly), or duplicated. Implicit missing
+values in regular time series are semantically equivalent to explicit missing
+values, and \code{geom_time_line()} since the slope between unkown values is also
+unknown, \code{geom_time_line()} will not draw lines connecting missing values of
+either type. Since duplicated time values are not semantically valid in
+regular time series, \code{geom_time_line()} will issue a warning (or an error if
+systematic duplicates are detected). When drawing a line between duplicated
+time points, the correct slopes are drawn by connecting all lines that lead
+to and from the duplicated time points (rather than drawing sawtooth lines).
+
+Further details about each specific capability are described in the following
+sections.
 }
 
 \section{Changing time offsets}{
 
+
 The \code{xtimeoffset} and \code{ytimeoffset} aesthetics allow for visualization of time
 offset changes, such as timezone transitions or daylight saving time changes.
 When successive time offsets differ, a dashed line segment is drawn to show
-the offset transition.
+the offset transition. These aesthetics are automatically set when using
+\code{position} = \code{\link[=position_time_civil]{position_time_civil()}} (the default), however the offsets can
+also be set manually to show other types of time offsets. One example of when
+it is useful to set the offsets manually is when showing measurements from a
+sensor with a known time drift (e.g. a clock that runs fast or slow) that is
+re-calibrated at known times.
 }
 
+\section{Missing time values}{
+
+
+Explicit missing values are where an \code{NA} value is included in the data, but
+for regular time series it is also possible to identify implicit missing time
+values. Unlike \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}, \code{geom_time_line()} will also not connect
+points separated by implicit missing values, creating gaps in the line (just
+like when an explicit missing value is present in \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}).
+}
+
+\section{Duplicated time values}{
+
+
+If there are duplicated time values within a group, \code{geom_time_line()} will
+issue a warning. An error will be raised if these duplications are systematic
+across the geometry, specifically if more than 50\% of time points contain the
+same number of duplicates. Systematic duplicates typically indicate a need to
+use grouping aesthetics (\link[ggplot2:aes_group_order]{ggplot2::group}, or \link[ggplot2:aes_colour_fill_alpha]{ggplot2::colour}) to
+draw separate lines for each time series. Rather than plotting an erroneous
+'sawtooth' line which misrepresents the rate of change, the geometry will
+draw all lines that connect to and from each of the duplicated time values.
+}
+
+\examples{
+
+library(ggplot2)
+
+
+# Basic time line plot of a random walk (no timezone changes)
+df_ts <- data.frame(
+  time = as.POSIXct("2023-03-11", tz = "Australia/Melbourne") + 0:11 * 3600,
+  value = cumsum(rnorm(12, 2))
+)
+ggplot(df_rw, aes(time, value)) +
+  geom_time_line()
+
+# Random walk with a backward timezone change (DST ends)
+df_tz_back <- data.frame(
+  time = as.POSIXct("2023-04-02", tz = "Australia/Melbourne") + 0:11 * 3600,
+  value = cumsum(rnorm(12, 2))
+)
+ggplot(df_tz_back, aes(time, value)) +
+  geom_time_line()
+
+# Random walk with a forward timezone change (DST starts)
+df_tz_forward <- data.frame(
+  time = as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:11 * 3600,
+  value = cumsum(rnorm(12, 2))
+)
+ggplot(df_tz_forward, aes(time, value)) +
+  geom_time_line()
+
+
+}
 \seealso{
 \code{\link[=position_time_civil]{position_time_civil()}}/\code{\link[=position_time_absolute]{position_time_absolute()}} for civil and absolute time positioning.
 
