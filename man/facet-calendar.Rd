@@ -86,20 +86,6 @@ If you wish to simply plot time series data in the style of a calendar, you
 should instead use the \code{\link[=coord_calendar]{coord_calendar()}} coordinate system.
 }
 
-\examples{
-\donttest{
-library(ggplot2)
-fs <- dplyr::filter(
-  tsibble::pedestrian,
-  Date < as.Date("2015-05-01")
-)
-
-ggplot(fs, aes(x = Time, y = Count)) +
-  geom_line(aes(colour = Sensor)) +
-  facet_calendar(vars(Date), nrow = 2) +
-  theme(legend.position = "bottom")
-}
-}
 \author{
 Earo Wang
 }

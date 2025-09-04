@@ -75,7 +75,7 @@
 #'
 #' # Monthly facets can be used to create a complete calendar for 2015.
 #' tsibble::pedestrian |>
-#'   dplyr::filter(year(Date) == 2015) |>
+#'   dplyr::filter(lubridate::year(Date) == 2015) |>
 #'   ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
 #'   geom_line() +
 #'   coord_calendar(time_rows = "1 week") +
