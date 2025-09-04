@@ -129,6 +129,8 @@ CoordCalendar <- function(coord) {
     "CoordCalendar",
     coord,
 
+    n_row = 1L,
+
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
       params <- ggproto_parent(coord, self)$setup_panel_params(
         scale_x,
@@ -140,20 +142,21 @@ CoordCalendar <- function(coord) {
       # TODO: Currently this just lays everything out in a column, but n_row
       # and/or time_rows presumably should come from somewhere that knows stuff
       # about the layout of the calendar.
-      params$n_row <- length(params$time_cuts) - 1
-      params$time_rows <- seq_len(params$n_row)
+      n_row_local <- length(params$time_cuts) - 1L
+      self$n_row <- max(self$n_row, n_row_local)
+      params$time_rows <- seq_len(n_row_local)
 
       params
     },
 
     render_fg = function(self, panel_params, theme) {
       fg <- ggproto_parent(coord, self)$render_fg(panel_params, theme)
-      repeat_grob_in_rows(fg, panel_params$n_row, panel_params$is_flipped)
+      repeat_grob_in_rows(fg, self$n_row, panel_params$is_flipped)
     },
 
     render_bg = function(self, panel_params, theme) {
       bg <- ggproto_parent(coord, self)$render_bg(panel_params, theme)
-      repeat_grob_in_rows(bg, panel_params$n_row, panel_params$is_flipped)
+      repeat_grob_in_rows(bg, self$n_row, panel_params$is_flipped)
     },
 
     render_axis_v = function(self, panel_params, theme) {
@@ -163,13 +166,13 @@ CoordCalendar <- function(coord) {
       )
       if (!panel_params$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
-        height <- 1 / panel_params$n_row
+        height <- 1 / self$n_row
         axis_grobs <- lapply(axis_grobs, function(grob) {
           gtable_col(
             "y_axis",
-            replicate(panel_params$n_row, grob, simplify = FALSE),
+            replicate(self$n_row, grob, simplify = FALSE),
             width = grobWidth(grob),
-            heights = unit(rep(height, panel_params$n_row), "npc")
+            heights = unit(rep(height, self$n_row), "npc")
           )
         })
       }
@@ -183,13 +186,13 @@ CoordCalendar <- function(coord) {
       )
       if (panel_params$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
-        width <- 1 / panel_params$n_row
+        width <- 1 / self$n_row
         axis_grobs <- lapply(axis_grobs, function(grob) {
           gtable_row(
             "x_axis",
-            replicate(panel_params$n_row, grob, simplify = FALSE),
+            replicate(self$n_row, grob, simplify = FALSE),
             height = grobHeight(grob),
-            widths = unit(rep(width, panel_params$n_row), "npc")
+            widths = unit(rep(width, self$n_row), "npc")
           )
         })
       }

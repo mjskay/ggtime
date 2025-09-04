@@ -165,6 +165,8 @@ CoordLoop <- function(coord) {
     "CoordLoop",
     coord,
 
+    n_row = 1L,
+
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
       # We need to adjust the panel parameters so that the scale is zoomed in
       # on the first region (which we will translate all other regions onto in draw_panel).
@@ -180,46 +182,52 @@ CoordLoop <- function(coord) {
 
       # Determine the cutpoints where we will loop
       if (is_waiver(self$loops)) {
-        self$loops <- cut_axis_time(
+        time_cuts <- cut_axis_time(
           uncut_params,
           self$time,
           self$time_loops,
           self$ljust
         )
       } else {
-        self$loops <- sort(unique(self$loops))
-        self$loops <- c(
-          self$loops - self$ljust,
-          self$loops[length(self$loops)] + (1 - self$ljust)
+        time_cuts <- sort(unique(self$loops))
+        time_cuts <- c(
+          time_cuts - self$ljust,
+          time_cuts[length(time_cuts)] + (1 - self$ljust)
         )
       }
 
       # Recalculate the panel parameters zoomed in on the first region.
       # Doing it this way should apply expand settings, etc, again.
       # (comment out this line to disable zooming for debugging)
+      old_limits <- self$limits
       self$limits[[self$time]] <- c(
         # Restart at the first time point
-        self$loops[1],
+        time_cuts[1],
         # End at the longest time point in the loop
-        self$loops[1] + max(diff(self$loops))
+        time_cuts[1] + max(diff(time_cuts))
       )
       cut_params <- ggproto_parent(coord, self)$setup_panel_params(
         scale_x,
         scale_y,
         params
       )
-      cut_params$time_cuts <- self$loops
+      self$limits <- old_limits
+
+      cut_params$time_cuts <- time_cuts
       cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
-      cut_params$n_row <- 1L
       cut_params$is_flipped <- isTRUE(self$time == "y")
       cut_params$uncut <- uncut_params
       cut_params
     },
 
     range = function(self, panel_params) {
-      # range needs to be calculated on the uncut scale so that (e.g.)
+      # range needs to consider both the cut and the uncut scale so that (e.g.)
       # the position of infinities is correct
-      ggproto_parent(coord, self)$range(panel_params$uncut)
+      Map(
+        range,
+        ggproto_parent(coord, self)$range(panel_params),
+        ggproto_parent(coord, self)$range(panel_params$uncut)
+      )
     },
 
     transform = function(self, data, panel_params) {
@@ -250,7 +258,7 @@ CoordLoop <- function(coord) {
         panel,
         cuts,
         params$time_rows,
-        params$n_row,
+        self$n_row,
         params$is_flipped,
         is_clipped
       )
@@ -374,6 +382,10 @@ cut_axis_time <- function(panel_params, axis, by, ljust) {
   trans <- panel_params[[axis]]$get_transformation()
   range <- panel_params[[axis]]$limits
   time_range <- trans$inverse(range)
+  if (is.character(by)) {
+    time_range[1] <- lubridate::floor_date(time_range[1], by)
+    time_range[2] <- lubridate::ceiling_date(time_range[2], by)
+  }
   time_cuts <- unique(c(
     seq(time_range[1] - ljust, time_range[2] + (1 - ljust), by = by),
     time_range[2]
