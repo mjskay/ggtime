@@ -13,6 +13,7 @@ scale_x_mixtime(
   minor_breaks = waiver(),
   time_minor_breaks = waiver(),
   common_time = waiver(),
+  time_align = 0.5,
   warps = waiver(),
   time_warps = waiver(),
   limits = NULL,
@@ -74,6 +75,10 @@ specified, \code{time_minor_breaks} wins.}
 \item{common_time}{Acts like a vctrs \code{ptype} defining the common chronon to
 use for mixed granularity. The default automatically selects it.}
 
+\item{time_align}{A number between 0 and 1 defining how to align coarser
+granularities onto the common time scale. 0 means start alignment,
+1 means end alignment, and 0.5 means center alignment (the default).}
+
 \item{warps}{Warp the time scale to have a consistent length, one of:
 \itemize{
 \item \code{NULL} or \code{waiver()} for no warping (the default)
@@ -129,13 +134,62 @@ bounds values with \code{NA}.
 These are the default scales for mixtime vectors, responsible for mapping
 time points to aesthetics along with identifying break points and labels for
 the axes and guides. To override the scales behaviour manually, use
-\verb{scale_*_mixtime}.
+\verb{scale_*_mixtime}. The primary purpose of these scales is to scale time
+points across multiple granularities onto a common time scale. This is
+achieved by identifying and coercing all time points to the finest chronon
+that all time points can be represented in. This common time chronon is
+automatically identified, but can be manually specified using the
+\code{common_time}.
 }
-\details{
-Additional to the standard ggplot2 continuous scale options, these scales
-provide time specific options including:
+\section{Practical usage}{
 
-\strong{Granularity alignment}
+
+When using \code{mixtime} vectors to represent time variables in ggplot2, these
+scales are automatically applied. In most cases, the default behaviour will
+be sufficient for scaling time points into plot aesthetics. These scales can
+be used to manually adjust the scaling behaviour, such as adjusting the
+breaks and labels or using a different common time scale.
+
+Similarly to the temporal scales in ggplot2 (\code{\link[=scale_x_date]{scale_x_date()}} and
+\code{\link[=scale_x_datetime]{scale_x_datetime()}}), these scales can adjust the breaks and labels using
+duration-based intervals and strftime-like formatting. These time aware
+options are prefixed with \code{time_} (e.g. \code{time_breaks} and \code{time_labels}),
+and take precedence over the non-time aware options (e.g. \code{breaks} and
+\code{labels}). The scale's breaks can be specified with \verb{mixtime::duration`` objects (e.g. }time_breaks = mixtime::months(1L)\verb{), or with strings that can be parsed into durations (e.g. `time_breaks = "1 month"`). Labels for time points in Gregorian calendars can be specified using [base::strftime()] formats (e.g. `time_labels = "\%b \%Y"} for "Jan 2020"). Concise strings for
+non-Gregorian calendars are not yet supported, but can be created using
+custom label functions (e.g. \code{labels = function(x) { ... }}).
+
+A core feature of these scales is the ability to handle time from multiple
+timezones, granularities, and calendars. This is achieved by mapping all time
+points to a common time scale, which is automatically identifying the finest
+compatible chronon that can represent the input data. This allows time points
+across different granularities (e.g. \link[base:DateTimeClasses]{base::POSIXt}, \link[base:Dates]{base::Date}, and
+\link[mixtime:gregorian-continuous]{mixtime::yearmonth}) to be plotted together on a common time scale. In this
+case the finest chronon is 1 second (from \link[base:DateTimeClasses]{base::POSIXt}), so all time points
+are mapped to a 1 second chronon for plotting. Mapping day and month chronons
+to seconds introduces indeterminancy - which second should be used to
+represent a day or month? This is resolved using the \code{time_align} argument,
+which defaults to center alignment. This means that a day is mapped to noon,
+and a month is mapped to the middle of the month.
+
+Another time specific feature of these scales is temporal warping. This
+adjusts the mapping of time points to plot aesthetics to have a consistent
+length between specified time points. This is most useful in comparing the
+shapes of cycles with irregular durations, including:
+\itemize{
+\item astronomical cycles (e.g. the rising and setting of the sun)
+\item economic cycles (e.g. growth and recession phases of economies)
+\item predator-prey cycles (e.g. population dynamics of interacting species)
+\item biological cycles (e.g. hormonal cycles)
+\item calendar cycles (e.g. days in each month)
+}
+
+Further details about time specific scale options are described in the
+following sections.
+}
+
+\section{Granularity alignment}{
+
 
 Visualising mixed granularity time data introduces indeterminacy in the
 mapping of less precise time points onto a common time scale. For example,
@@ -153,8 +207,10 @@ will be daily, with the monthly points aligned according to the \code{time_align
 argument. If multiple time zones are present, the common time zone will
 default to UTC. The common time scale can be manually specified using the
 \code{common_time} argument, which accepts a \code{mixtime::time_unit}.
+}
 
-\strong{Temporal warping}
+\section{Temporal warping}{
+
 
 Time scales can be warped to have a consistent length between specified time
 points. This is useful when visually exploring cyclical patterns where each
@@ -163,4 +219,35 @@ can be more easily compared. Temporal warping is controlled using the \code{warp
 argument, which accepts a \code{mixtime} vector defining the positions of the
 warping points. Calendar-based warping points can be conveniently specified
 using the \code{time_warps} argument, which accepts a duration like "1 month".
+}
+
+\examples{
+
+## The common timezone for mixed timezone data is UTC.
+#df_tz_mixed <- data.frame(
+#  time = mixtime::mixtime(
+#    as.POSIXct("2023-10-01", tz = "Australia/Melbourne") + 0:23 * 3600,
+#    as.POSIXct("2023-10-01", tz = "America/New_York") + 0:23 * 3600
+#  ),
+#  value = c(cumsum(rnorm(12, 2)), cumsum(rnorm(12, -2)))
+#)
+#ggplot(df_tz_mixed, aes(time, value)) +
+#  geom_time_line()
+## Alternative breaks and labels apply to the common time scale.
+#ggplot(df_tz_mixed, aes(time, value)) +
+#  geom_time_line() +
+#  scale_x_mixtime(time_breaks = "6 hours", time_labels = "\%H:\%M")
+## Plotting monthly and daily data together will align months to the middle day of the month.
+#df_chronon_mixed <- data.frame(
+#  time = c(
+#    mixtime::yearmonth("2023-01") + 0:11,
+#    as.Date("2023-01-01") + 0:364
+#  ),
+#  value = c(cumsum(rnorm(12, 30)), cumsum(rnorm(365, 1)))
+#)
+## Warping the x-axis
+#ggplot(df_chronon_mixed, aes(time, value)) +
+#  geom_time_line(time_warps = "1 month")
+
+
 }
