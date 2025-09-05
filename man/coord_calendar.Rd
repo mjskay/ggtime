@@ -122,7 +122,7 @@ tsibble::pedestrian |>
   geom_line() +
   coord_calendar(time_rows = "1 week") +
   facet_wrap(
-    vars(lubridate::month(Date, label = TRUE))
+    vars(lubridate::month(Date, label = TRUE)),
     ncol = 3, scales = "free_x"
   )
 
