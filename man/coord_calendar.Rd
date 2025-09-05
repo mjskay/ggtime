@@ -98,7 +98,9 @@ these geometries can be controlled with the \code{ljust} parameter, as described
 in \code{\link[=coord_loop]{coord_loop()}}.
 
 The calendar coordinate system works well in conjunction with facetting to
-give more space between months and/or years of the calendar.
+give more space between months and/or years of the calendar. When facetting,
+using \code{scales = "free_x"} is recommended to make each facet only include
+time periods appropriate for that panel.
 }
 
 \examples{
@@ -119,6 +121,9 @@ tsibble::pedestrian |>
   ggplot(aes(x = Date_Time, y = Count, color = Sensor)) +
   geom_line() +
   coord_calendar(time_rows = "1 week") +
-  facet_wrap(~ lubridate::month(Date, label = TRUE), ncol = 3)
+  facet_wrap(
+    vars(lubridate::month(Date, label = TRUE))
+    ncol = 3, scales = "free_x"
+  )
 
 }
