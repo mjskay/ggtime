@@ -182,9 +182,10 @@ CoordLoop <- function(coord) {
 
       # Determine the cutpoints where we will loop
       if (is_waiver(self$loops)) {
-        time_cuts <- cut_axis_time(
+        self$time_axis <- coord_time_axis(self, self$time)
+        time_cuts <- cut_axis_time_loop(
           uncut_params,
-          self$time,
+          self$time_axis,
           self$time_loops,
           self$ljust
         )
@@ -252,7 +253,7 @@ CoordLoop <- function(coord) {
       }
 
       # Get cutpoints along the axis for dividing the panel grob into regions
-      cuts <- params[[self$time]]$rescale(params$time_cuts)
+      cuts <- params[[self$time_axis]]$rescale(params$time_cuts)
 
       translated_panels <- translate_and_superimpose_grobs(
         panel,
@@ -370,7 +371,7 @@ flip_grid_fun <- function(f, is_flipped) {
   new_f
 }
 
-#' Get time cutpoints along a positional axis
+#' Get cutpoints along a positional axis for creating a time loop
 #' @param panel_params Panel params, e.g. as returned by `Coord$setup_panel_params()`
 #' and passed to `Coord$draw_panel(params = ...)`
 #' @param axis Axis to cut (`"x"` or `"y"`).
@@ -378,7 +379,7 @@ flip_grid_fun <- function(f, is_flipped) {
 #' @param ljust Loop justification, a number between 0 and 1
 #' @returns vector of time cutpoints
 #' @noRd
-cut_axis_time <- function(panel_params, axis, by, ljust) {
+cut_axis_time_loop <- function(panel_params, axis, by, ljust) {
   trans <- panel_params[[axis]]$get_transformation()
   range <- panel_params[[axis]]$limits
   time_range <- trans$inverse(range)
@@ -391,4 +392,35 @@ cut_axis_time <- function(panel_params, axis, by, ljust) {
     time_range[2]
   ))
   time_cuts
+}
+
+#' Get the `axis` to use with `cut_axis_time_loop`
+#' @param panel_params Panel params, e.g. as returned by `Coord$setup_panel_params()`
+#' and passed to `Coord$draw_panel(params = ...)`
+#' @param time Axis to loop as passed to `coord_loop()` (`"x"` or `"y"`).
+#' @returns Axis of `coord` to loop that corresponds to the `time` axis.
+#' @noRd
+coord_time_axis <- function(coord, time) {
+  UseMethod("coord_time_axis")
+}
+
+#' @export
+coord_time_axis.default <- function(coord, time) {
+  stop("coord_loop(coord = <", class(coord)[1], ">) is not supported.")
+}
+
+#' @export
+coord_time_axis.CoordCartesian <- function(coord, time) {
+  if (!(time %in% c("x", "y"))) {
+    stop("coord_loop(coord = <CoordCartesian>, time = ...) requires time %in% c('x', 'y').")
+  }
+  time
+}
+
+#' @export
+coord_time_axis.CoordRadial <- function(coord, time) {
+  if (!isTRUE(time == coord$theta)) {
+    stop("coord_loop(coord = <CoordRadial>, time = ...) requires time == coord$theta.")
+  }
+  "theta"
 }
