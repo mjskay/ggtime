@@ -148,6 +148,11 @@ CoordCalendar <- function(coord) {
     n_row = 1L,
 
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
+      if (!inherits(self, "CoordCartesian")) {
+        cls <- setdiff(class(self), c("CoordCalendar", "CoordLoop"))[1L]
+        stop("coord_calendar(coord = <", cls, ">) is not supported.")
+      }
+
       params <- ggproto_parent(coord, self)$setup_panel_params(
         scale_x,
         scale_y,
@@ -167,12 +172,12 @@ CoordCalendar <- function(coord) {
 
     render_fg = function(self, panel_params, theme) {
       fg <- ggproto_parent(coord, self)$render_fg(panel_params, theme)
-      repeat_grob_in_rows(fg, self$n_row, panel_params$is_flipped)
+      repeat_grob_in_rows(fg, self$n_row, self$is_flipped)
     },
 
     render_bg = function(self, panel_params, theme) {
       bg <- ggproto_parent(coord, self)$render_bg(panel_params, theme)
-      repeat_grob_in_rows(bg, self$n_row, panel_params$is_flipped)
+      repeat_grob_in_rows(bg, self$n_row, self$is_flipped)
     },
 
     render_axis_v = function(self, panel_params, theme) {
@@ -180,7 +185,7 @@ CoordCalendar <- function(coord) {
         panel_params,
         theme
       )
-      if (!panel_params$is_flipped) {
+      if (!self$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
         height <- 1 / self$n_row
         axis_grobs <- lapply(axis_grobs, function(grob) {
@@ -200,7 +205,7 @@ CoordCalendar <- function(coord) {
         panel_params,
         theme
       )
-      if (panel_params$is_flipped) {
+      if (self$is_flipped) {
         # TODO: factor out (see note in repeat_grob_in_rows)
         width <- 1 / self$n_row
         axis_grobs <- lapply(axis_grobs, function(grob) {

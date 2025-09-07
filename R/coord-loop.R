@@ -174,6 +174,9 @@ CoordLoop <- function(coord) {
     n_row = 1L,
 
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
+      self$is_clipped <- isTRUE(self$clip_loops %in% c("on", TRUE)) # could have stricter validation
+      self$is_flipped <- isTRUE(self$time == "y")
+
       # We need to adjust the panel parameters so that the scale is zoomed in
       # on the first region (which we will translate all other regions onto in draw_panel).
 
@@ -221,7 +224,6 @@ CoordLoop <- function(coord) {
 
       cut_params$time_cuts <- time_cuts
       cut_params$time_rows <- rep.int(1L, length(cut_params$time_cuts) - 1)
-      cut_params$is_flipped <- isTRUE(self$time == "y")
       cut_params$uncut <- uncut_params
       cut_params
     },
@@ -313,10 +315,7 @@ specialize_coord_loop.CoordCartesian <- function(coord, ...) {
     },
 
     draw_panel = function(self, panel, params, theme) {
-      is_clipped = isTRUE(self$clip_loops %in% c("on", TRUE)) # could have stricter validation
-      if (is_clipped && !ggplot2::check_device("clippingPaths")) {
-        stop("coord_loop(clip = 'on') requires R v4.2.0 or higher.")
-      }
+      check_can_clip("coord_loop(clip = 'on')", self$is_clipped)
 
       # Get cutpoints along the axis for dividing the panel grob into regions
       cuts <- params[[self$time_scale]]$rescale(params$time_cuts)
@@ -326,8 +325,8 @@ specialize_coord_loop.CoordCartesian <- function(coord, ...) {
         cuts,
         params$time_rows,
         self$n_row,
-        params$is_flipped,
-        is_clipped
+        self$is_flipped,
+        self$is_clipped
       )
 
       ggproto_parent(coord, self)$draw_panel(translated_panels, params, theme)
@@ -351,12 +350,210 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
     limits = list(
       theta = coord$limits[[coord$theta]] %||% coord$super()$limits$theta,
       r = coord$limits[[coord$r]] %||% coord$super()$limits$r
-    )
+    ),
+
+    setup_panel_params = function(self, scale_x, scale_y, params = list()) {
+      params <- ggproto_parent(coord, self)$setup_panel_params(
+        scale_x,
+        scale_y,
+        params
+      )
+
+      # construct a piecewise linear transformation that re-aligns the start of
+      # each cut to the origin (and inserts gaps if clip is on)
+      time_trans <- params$theta$get_transformation()$transform
+      cuts <- time_trans(params$time_cuts) + self$ljust
+      widths <- diff(cuts)
+      origin <- cuts[1]
+      rest <- cuts[-1]
+      gap <- diff(params$theta.range)
+      prev_upper_limits <- origin + (seq_along(rest) - 1) * gap + widths
+      next_lower_limits <- origin + seq_along(rest) * gap
+      # NOTE: I think this needs to be half the smallest granularity, so this
+      # currently only works if the input scale is transforming to a numeric
+      # where the smallest granularity is 1
+      eps <- 0.99
+
+      params$cuts <- cuts
+      time_unaligned <- c(
+        origin - gap,
+        origin,
+        vctrs::vec_interleave(rest - eps, rest),
+        rest[length(rest)] + gap
+      )
+      time_aligned <- c(
+        origin - gap,
+        origin,
+        vctrs::vec_interleave(prev_upper_limits - eps, next_lower_limits),
+        next_lower_limits[length(next_lower_limits)] + gap
+      )
+
+      params$align <- approxfun(
+        time_unaligned,
+        time_aligned,
+        ties = "ordered",
+        rule = 2
+      )
+
+      in_gap_indicator <- stepfun(
+        vctrs::vec_interleave(prev_upper_limits - self$ljust * eps, next_lower_limits - self$ljust * eps),
+        c(0, rep(c(1, 0), length(rest))),
+        ties = "min"
+      )
+      params$in_gap <- function(x) {
+        in_gap_indicator(x) %in% 1  # NA => FALSE
+      }
+
+      params
+    },
+
+    transform =  function(self, data, panel_params) {
+      data[[self$theta]] <- panel_params$align(data[[self$theta]])
+      if (self$is_clipped) {
+        # this is a hack but I can't see any way to do proper clipping
+        in_gap <- panel_params$in_gap(data[[self$theta]])
+        if (any(in_gap)) {
+          data[in_gap, "colour"] = "transparent"
+          data[in_gap, "fill"] = "transparent"
+          data[in_gap, "alpha"] = 0
+        }
+      }
+      if (FALSE && self$is_clipped) {
+        # add gaps between consecutive points when going between cuts
+        # browser()
+        intervals <- c(-Inf, panel_params$cuts, Inf)
+        i <- findInterval(data[[self$theta]], intervals)
+        on_gap <- c(diff(i) != 0, FALSE) %in% TRUE
+        gap_groups <- cumsum(on_gap)
+        # data$group <- as.numeric(interaction(data$group, gap_groups))
+
+        group_dfs <- split(data, gap_groups)
+        n <- length(group_dfs)
+        last_rows <- lapply(group_dfs, tail, 1)
+        first_rows <- lapply(group_dfs, head, 1)
+        na_row <- data.frame(
+          colour = "transparent",
+          fill = "transparent",
+          alpha = 0
+          # linetype = 1,
+          # linewidth = 0,
+          # size = 0
+        )
+        na_row <- na_row[, intersect(names(na_row), names(data))]
+        na_rows <- .mapply(
+          function(last_row, first_row) {
+            do.call(cbind, list(
+              (last_row[, c("x", "y")] + first_row[, c("x", "y")]) / 2,
+              na_row,
+              last_row[, setdiff(names(last_row), c("x", "y", names(na_row)))]
+            ))
+            # out[[self$theta]] <- NA_real_
+            # out
+          },
+          list(last_rows[-n], first_rows[-1L]),
+          NULL
+        )
+        data <- vctrs::vec_rbind(!!!c(vctrs::vec_interleave(group_dfs[-n], na_rows), group_dfs[n]))
+      }
+      ggproto_parent(coord, self)$transform(data, panel_params)
+    },
+
+    draw_panel = function(self, panel, params, theme) {
+      check_can_clip("coord_loop(clip = 'on')", self$is_clipped)
+
+      # Get cutpoints along the axis for dividing the panel grob into regions
+      cuts <- params$cuts
+      x1s <- cuts[-length(cuts)]
+      x2s <- cuts[-1L]
+      thetas <- scales::rescale(x1s, to = c(0, 360), from = params$theta.range)
+      origin <- thetas[[1]]
+      rotations <- origin - thetas
+
+      # make clipping regions
+      clip_params <- params
+      clip_params$align <- identity
+      clip_grobs <- .mapply(
+        function(x1, x2) {
+          clip_data <- data.frame(x = c(x1, x1, x2, x2), y = c(Inf, -Inf, -Inf, Inf))
+          clip_path <- coord_munch(self, clip_data, clip_params, is_closed = TRUE)
+          polygonGrob(clip_path$x, clip_path$y, gp = gpar(col = alpha("red", 0.5), fill = "transparent"))
+        },
+        list(x1s, x2s),
+        NULL
+      )
+
+      # Rotate and superimpose the panel grob on itself repeatedly.
+      # I attempted to use defineGrob() + useGrob() here to improve efficiency
+      # (since theoretically it allows efficient repitition of a single grob
+      # drawn off-screen), I couldn't figure out how to make the grob defined
+      # by defineGrob() not be clipped by the first region it would theoretically
+      # have been drawn into given where it is in the grob tree, which meant
+      # it was always getting clipped. So I stuck to just repeatedly re-drawing
+      # the same grob.
+
+      # .viewport <- flip_grid_fun(viewport, is_flipped)
+      # .rectGrob <- flip_grid_fun(rectGrob, is_flipped)
+      grob <- inject(grobTree(!!!panel))
+      # translated_grobs <- lapply(rotations,
+      #   function(rotation) {
+      #     grobTree(
+      #       grob,
+      #       vp = viewport(angle = rotation)
+      #         # x = unit(origin - x, "npc"),
+      #         # y = unit(y, "npc"),
+      #         # height = unit(height, "npc"),
+      #         # just = c(0, 0)
+      #         # clip = if (is_clipped) {
+      #         #   .rectGrob(
+      #         #     unit(x, "npc"),
+      #         #     y = unit(0, "npc"),
+      #         #     width = unit(width, "npc"),
+      #         #     height = unit(1, "npc"),
+      #         #     just = c(0, 0)
+      #         #   )
+      #         # } else {
+      #         #   "inherit"
+      #         # }
+      #     )
+      #   }
+      # )
+
+      # # Uncomment for debug info --- region boundaries and centers
+      # centers <- rowMeans(embed(cuts, 2))
+      # translated_grobs <- c(
+      #   translated_grobs,
+      #   list(
+      #     rectGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), width = unit(widths, "npc"), gp = gpar(col = "red", fill = NA)),
+      #     pointsGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), gp = gpar(col = "red"))
+      #   )
+      # )
+
+      translated_panels <- c(
+        panel,
+        clip_grobs
+      )
+
+      ggproto_parent(coord, self)$draw_panel(translated_panels, params, theme)
+    }
   )
 }
 
 
 # helpers -----------------------------------------------------------------
+
+
+
+#' Check that clipping grobs are supported
+#' @param context string giving the context (e.g. function, arguments, etc)
+#' to use in message in case of failure
+#' @param check if not `TRUE` no check is made
+#' @returns `invisible(NULL)` if clipping is supported and or raises an error
+#' if not.
+check_can_clip <- function(context, check) {
+  if (check && !ggplot2::check_device("clippingPaths")) {
+    stop(context, " requires R v4.2.0 or higher.")
+  }
+}
 
 #' Translate and superimpose grobs at specified cutpoints along x (or y) axis
 #' @param grobs list of grobs
@@ -431,6 +628,95 @@ translate_and_superimpose_grobs <- function(
   # )
 
   translated_grobs
+}
+
+#' Rotate and superimpose grobs at specified cutpoints along x (or y) axis
+#' @param grobs list of grobs
+#' @param cuts x (or y if `is_flipped`) positions to cut along
+#' @param rows vector with length = `length(cuts) - 1` giving
+#' destination row id of each corresponding cut region (starting from 1).
+#' @param n_row maximum row in the layout
+#' @param is_flipped are the axes flipped? (so `cuts` are `y` positions).
+#' @param is_clipped should output regions be clipped?
+#' @noRd
+rotate_and_superimpose_grobs <- function(
+  self,
+  panel_params,
+  grobs,
+  cuts,
+  is_clipped = FALSE
+) {
+  xs <- cuts[-length(cuts)]
+  thetas <- scales::rescale(xs, to = c(0, 360), from = panel_params$theta.range) %% 360
+  origin <- thetas[[1]]
+  rotations <- thetas - origin
+
+  # make clipping regions
+  clip_grobs <- .mapply(
+    function(x1, x2) {
+      browser()
+      clip_data <- data.frame(x = c(x1, x1, x2, x2), y = c(Inf, -Inf, -Inf, Inf))
+      clip_path <- coord_munch(self, clip_data, panel_params, is_closed = TRUE)
+      polygonGrob(clip_path$x, clip_path$y, gp = gpar(col = "red", fill = "white"))
+    },
+    list(cuts[-length(cuts)], cuts[-1]),
+    NULL
+  )[1]
+
+  # Rotate and superimpose the panel grob on itself repeatedly.
+  # I attempted to use defineGrob() + useGrob() here to improve efficiency
+  # (since theoretically it allows efficient repitition of a single grob
+  # drawn off-screen), I couldn't figure out how to make the grob defined
+  # by defineGrob() not be clipped by the first region it would theoretically
+  # have been drawn into given where it is in the grob tree, which meant
+  # it was always getting clipped. So I stuck to just repeatedly re-drawing
+  # the same grob.
+
+  # .viewport <- flip_grid_fun(viewport, is_flipped)
+  # .rectGrob <- flip_grid_fun(rectGrob, is_flipped)
+  # grob <- inject(grobTree(!!!grobs))
+  # translated_grobs <- .mapply(
+  #   function(x, y, width) {
+  #     grobTree(
+  #       grob,
+  #       vp = .viewport(
+  #         x = unit(origin - x, "npc"),
+  #         y = unit(y, "npc"),
+  #         height = unit(height, "npc"),
+  #         just = c(0, 0),
+  #         clip = if (is_clipped) {
+  #           .rectGrob(
+  #             unit(x, "npc"),
+  #             y = unit(0, "npc"),
+  #             width = unit(width, "npc"),
+  #             height = unit(1, "npc"),
+  #             just = c(0, 0)
+  #           )
+  #         } else {
+  #           "inherit"
+  #         }
+  #       )
+  #     )
+  #   },
+  #   list(xs, ys, widths),
+  #   NULL
+  # )
+
+  # # Uncomment for debug info --- region boundaries and centers
+  # centers <- rowMeans(embed(cuts, 2))
+  # translated_grobs <- c(
+  #   translated_grobs,
+  #   list(
+  #     rectGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), width = unit(widths, "npc"), gp = gpar(col = "red", fill = NA)),
+  #     pointsGrob(x = unit(centers, "npc"), y = unit(rep(0.5, length(centers)), "npc"), gp = gpar(col = "red"))
+  #   )
+  # )
+
+  c(
+    grobs,
+    clip_grobs
+  )
+  # translated_grobs
 }
 
 #' Flip the x and y axes of a grid function
