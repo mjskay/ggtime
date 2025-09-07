@@ -386,7 +386,7 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
         vctrs::vec_interleave(prev_upper_limits - eps, next_lower_limits),
         next_lower_limits[length(next_lower_limits)] + range
       )
-      params$align <- approxfun(
+      params$align <- stats::approxfun(
         time_unaligned,
         time_aligned,
         ties = "ordered",
@@ -396,7 +396,7 @@ specialize_coord_loop.CoordRadial <- function(coord, ...) {
       # since we can't do proper clipping, the hackish solution I've come up
       # with is to make data in the gaps between loops transparent --- so we
       # need a function to identify if a value is in the gap
-      in_gap_indicator <- stepfun(
+      in_gap_indicator <- stats::stepfun(
         vctrs::vec_interleave(prev_upper_limits - self$ljust * eps, next_lower_limits - self$ljust * eps),
         c(0, rep(c(1, 0), length(rest))),
         ties = "min"
