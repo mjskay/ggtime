@@ -142,7 +142,7 @@ coord_loop <- function(
   clip_loops = "on",
   coord = coord_cartesian()
 ) {
-  ggplot2::ggproto(
+  specialize_coord_loop(ggplot2::ggproto(
     NULL,
     CoordLoop(coord),
     loops = loops,
@@ -154,7 +154,7 @@ coord_loop <- function(
     default = default,
     clip = clip,
     clip_loops = clip_loops
-  )
+  ))
 }
 
 #' @rdname ggplot2-ggproto
@@ -165,6 +165,12 @@ CoordLoop <- function(coord) {
     "CoordLoop",
     coord,
 
+    # The name of the scale representing time within `panel_params`.
+    # Usually but not always equal to `time`. Specializations of `CoordLoop`
+    # must set this appropriately (in [specialize_coord_loop()]).
+    time_scale = NULL,
+
+    # Number of rows in the layout (e.g. for `coord_calendar()`).
     n_row = 1L,
 
     setup_panel_params = function(self, scale_x, scale_y, params = list()) {
@@ -182,10 +188,9 @@ CoordLoop <- function(coord) {
 
       # Determine the cutpoints where we will loop
       if (is_waiver(self$loops)) {
-        self$time_axis <- coord_time_axis(self, self$time)
         time_cuts <- cut_axis_time_loop(
           uncut_params,
-          self$time_axis,
+          self$time_scale,
           self$time_loops,
           self$ljust
         )
@@ -201,7 +206,7 @@ CoordLoop <- function(coord) {
       # Doing it this way should apply expand settings, etc, again.
       # (comment out this line to disable zooming for debugging)
       old_limits <- self$limits
-      self$limits[[self$time]] <- c(
+      self$limits[[self$time_scale]] <- c(
         # Restart at the first time point
         time_cuts[1],
         # End at the longest time point in the loop
@@ -229,7 +234,68 @@ CoordLoop <- function(coord) {
         ggproto_parent(coord, self)$range(panel_params),
         ggproto_parent(coord, self)$range(panel_params$uncut)
       )
-    },
+    }
+  )
+}
+
+# specialization ----------------------------------------------------------
+
+#' Specialize the implementation of coord_loop depending on the base coord
+#'
+#' [coord_loop()] wraps a base coord such as [coord_cartesian()] or
+#' [coord_radial()]. This function is called by [CoordLoop()] to specialize an
+#' instance for its underlying base coord by overriding methods needed to support
+#' that base coord.
+#' @param coord A [`ggproto`] object of class `CoordLoop`, which will inherit
+#' from some other coord (as passed to `CoordLoop(coord = ...)`.
+#' @param ... unused.
+#' @details
+#' Implement this method on a coord's class to provide support for that coord in
+#' [coord_loop()] by returning.
+#'
+#' Specializations *must* implement:
+#'
+#' - `coord$time_scale`: The name of the time scale (e.g. `"x"`, `"y"`, ...):
+#'   corresponds to the element of `panel_params` holding the `Scale` that
+#'   handles time.
+#'
+#' Specializations *may need to* implement:
+#'
+#' - `coord$limits`: If the positional scales for this coord are not `x` and `y`
+#'   (so `coord$time_scale` is not `"x"` or `"y"`), you may need to adjust
+#'   `limits` to map limits from `xlim` and `ylim` onto the corresponding scales.
+#' - `coord$transform()`: To ensure that infinite coordinates are transformed
+#'   to the correct location in looped coordinates.
+#'
+#' We use a separate specialization function rather than making `CoordLoop()`
+#' generic so that the default method of this generic can be an error
+#' (representing an attempt to use an unsupported base coord).
+#' @returns A [`ggproto`] object that inherits from `coord`. Raises an error
+#' if no parent classes of `coord` are supported by [coord_loop()].
+#' @noRd
+specialize_coord_loop <- function(coord, ...) {
+  UseMethod("specialize_coord_loop")
+}
+
+#' @export
+specialize_coord_loop.default <- function(coord, ...) {
+  cls <- setdiff(class(coord), "CoordLoop")[1L]
+  stop("coord_loop(coord = <", cls, ">) is not supported.")
+}
+
+#' @export
+specialize_coord_loop.CoordCartesian <- function(coord, ...) {
+  force(coord)
+
+  if (!isTRUE(coord$time %in% c("x", "y"))) {
+    stop("coord_loop(coord = <CoordCartesian>, time = ...) requires time %in% c('x', 'y').")
+  }
+
+  ggplot2::ggproto(
+    "CoordLoopCartesian",
+    coord,
+
+    time_scale = coord$time,
 
     transform = function(self, data, panel_params) {
       reverse <- panel_params$reverse %||% "none"
@@ -249,11 +315,11 @@ CoordLoop <- function(coord) {
     draw_panel = function(self, panel, params, theme) {
       is_clipped = isTRUE(self$clip_loops %in% c("on", TRUE)) # could have stricter validation
       if (is_clipped && !ggplot2::check_device("clippingPaths")) {
-        stop("Looped coordinates requires R v4.2.0 or higher.")
+        stop("coord_loop(clip = 'on') requires R v4.2.0 or higher.")
       }
 
       # Get cutpoints along the axis for dividing the panel grob into regions
-      cuts <- params[[self$time_axis]]$rescale(params$time_cuts)
+      cuts <- params[[self$time_scale]]$rescale(params$time_cuts)
 
       translated_panels <- translate_and_superimpose_grobs(
         panel,
@@ -268,6 +334,29 @@ CoordLoop <- function(coord) {
     }
   )
 }
+
+#' @export
+specialize_coord_loop.CoordRadial <- function(coord, ...) {
+  force(coord)
+
+  if (!isTRUE(coord$time == coord$theta)) {
+    stop("coord_loop(coord = <CoordRadial>, time = ...) requires time == coord$theta.")
+  }
+
+  ggplot2::ggproto(
+    "CoordLoopRadial",
+    coord,
+
+    time_scale = "theta",
+    limits = list(
+      theta = coord$limits[[coord$theta]] %||% coord$super()$limits$theta,
+      r = coord$limits[[coord$r]] %||% coord$super()$limits$r
+    )
+  )
+}
+
+
+# helpers -----------------------------------------------------------------
 
 #' Translate and superimpose grobs at specified cutpoints along x (or y) axis
 #' @param grobs list of grobs
@@ -388,39 +477,8 @@ cut_axis_time_loop <- function(panel_params, axis, by, ljust) {
     time_range[2] <- lubridate::ceiling_date(time_range[2], by)
   }
   time_cuts <- unique(c(
-    seq(time_range[1] - ljust, time_range[2] + (1 - ljust), by = by),
-    time_range[2]
-  ))
+    seq(time_range[1], time_range[2] + 1, by = by),
+    time_range[2] + 1
+  )) - ljust
   time_cuts
-}
-
-#' Get the `axis` to use with `cut_axis_time_loop`
-#' @param panel_params Panel params, e.g. as returned by `Coord$setup_panel_params()`
-#' and passed to `Coord$draw_panel(params = ...)`
-#' @param time Axis to loop as passed to `coord_loop()` (`"x"` or `"y"`).
-#' @returns Axis of `coord` to loop that corresponds to the `time` axis.
-#' @noRd
-coord_time_axis <- function(coord, time) {
-  UseMethod("coord_time_axis")
-}
-
-#' @export
-coord_time_axis.default <- function(coord, time) {
-  stop("coord_loop(coord = <", class(coord)[1], ">) is not supported.")
-}
-
-#' @export
-coord_time_axis.CoordCartesian <- function(coord, time) {
-  if (!(time %in% c("x", "y"))) {
-    stop("coord_loop(coord = <CoordCartesian>, time = ...) requires time %in% c('x', 'y').")
-  }
-  time
-}
-
-#' @export
-coord_time_axis.CoordRadial <- function(coord, time) {
-  if (!isTRUE(time == coord$theta)) {
-    stop("coord_loop(coord = <CoordRadial>, time = ...) requires time == coord$theta.")
-  }
-  "theta"
 }

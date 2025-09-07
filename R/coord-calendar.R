@@ -115,28 +115,32 @@ coord_calendar <- function(
       "`cols` and `time_cols` are not currently supported in coord_calendar()"
     )
   }
-  ggplot2::ggproto(
-    NULL,
-    CoordCalendar(coord),
+
+  # TODO: maybe don't want an inheritance relationship here
+  # (would need to factor out common setup_panel_params / draw_panel code)
+  base_coord <- coord_loop(
     loops = rows,
     time_loops = time_rows,
     time = time,
     ljust = ljust,
-    limits = list(x = xlim, y = ylim),
+    xlim = xlim,
+    ylim = ylim,
     expand = expand,
     default = default,
     clip = clip,
     clip_loops = clip_rows
+  )
+
+  ggplot2::ggproto(
+    NULL,
+    CoordCalendar(base_coord)
   )
 }
 
 #' @rdname ggplot2-ggproto
 #' @keywords internal
 CoordCalendar <- function(coord) {
-  # TODO: maybe don't want an inheritance relationship here
-  # (would just need to factor out common setup_panel_params / draw_panel code)
-  base_coord <- coord
-  coord <- CoordLoop(coord)
+  force(coord)
   ggplot2::ggproto(
     "CoordCalendar",
     coord,
